@@ -1,4 +1,4 @@
-﻿using NAudio.Wave;
+using NAudio.Wave;
 using System.Collections.Concurrent;
 using System.Threading.Channels;
 using Vacanam.Core.Interfaces;
@@ -153,7 +153,7 @@ public sealed class RecordingBuffer : IDisposable
     }
 }
 
-internal sealed class IgnoreDisposeStream : Stream
+public sealed class IgnoreDisposeStream : Stream
 {
     private readonly Stream _innerStream;
     public IgnoreDisposeStream(Stream innerStream) => _innerStream = innerStream;
@@ -172,3 +172,4 @@ internal sealed class IgnoreDisposeStream : Stream
 
     protected override void Dispose(bool disposing) { }
 }
+

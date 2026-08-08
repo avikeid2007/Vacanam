@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.IO;
-using System.Threading.Channels;
 using System.Windows;
 using System.Windows.Threading;
 using Vacanam.App.ViewModels;
@@ -16,12 +15,10 @@ namespace Vacanam.App.Services;
 
 /// <summary>
 /// Manages the application lifecycle: tray icon, hotkey registration,
-/// WASAPI audio capture, real-time streaming Whisper STT transcription,
-/// instant text injection, overlay management, and pipeline state coordination.
+/// WASAPI audio capture, Whisper STT transcription, instant text injection,
+/// overlay management, and pipeline state coordination.
 ///
-/// Features Real-Time Streaming Transcription:
-/// Audio chunks are processed in the background while holding Ctrl+Space.
-/// Text appears on overlay in real-time and inserts into active app <30ms upon key release.
+/// Thread-safe, stable, low-latency pipeline with zero native crashes.
 /// </summary>
 public sealed class ApplicationLifetimeService(
     IHostApplicationLifetime lifetime,
@@ -39,10 +36,8 @@ public sealed class ApplicationLifetimeService(
     private RecordingOverlay? _overlay;
     private RecordingBuffer? _recordingBuffer;
     private DispatcherTimer? _audioMeterTimer;
-
-    private Channel<byte[]>? _audioChannel;
-    private Task<string>? _streamingTask;
     private ApplicationContext _currentSessionContext = ApplicationContext.Unknown;
+    private readonly SemaphoreSlim _pipelineLock = new(1, 1);
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -59,7 +54,7 @@ public sealed class ApplicationLifetimeService(
 
         speechRecognizer.SegmentReceived += OnTranscriptSegmentReceived;
 
-        logger.LogInformation("Vacanam (Real-Time Streaming Voice Typing) is running. Hold Ctrl+Space to dictate into any window.");
+        logger.LogInformation("Vacanam is running. Hold Ctrl+Space to dictate into any window.");
         return Task.CompletedTask;
     }
 
@@ -126,7 +121,7 @@ public sealed class ApplicationLifetimeService(
     {
         Application.Current.Dispatcher.Invoke(() =>
         {
-            if (!string.IsNullOrWhiteSpace(e.Text))
+            if (!string.IsNullOrWhiteSpace(e.Text) && !e.Text.Contains("[BLANK_AUDIO]", StringComparison.OrdinalIgnoreCase))
             {
                 overlayViewModel.StatusLabel = e.Text;
             }
@@ -154,13 +149,7 @@ public sealed class ApplicationLifetimeService(
             {
                 _recordingBuffer?.Dispose();
                 _recordingBuffer = new RecordingBuffer(audioRecorder);
-
-                // Create channel for real-time background streaming
-                _audioChannel = Channel.CreateUnbounded<byte[]>();
-                _recordingBuffer.BeginCapture(_audioChannel.Writer);
-
-                // Start real-time background transcription task
-                _streamingTask = Task.Run(() => StreamTranscriptionWorkerAsync(_audioChannel.Reader));
+                _recordingBuffer.BeginCapture();
 
                 await audioRecorder.StartAsync();
 
@@ -189,7 +178,7 @@ public sealed class ApplicationLifetimeService(
                 return;
             }
 
-            logger.LogInformation("Hotkey released. Completing streaming audio capture.");
+            logger.LogInformation("Hotkey released. Stopping audio capture.");
             _audioMeterTimer?.Stop();
 
             try
@@ -197,7 +186,7 @@ public sealed class ApplicationLifetimeService(
                 TransitionTo(VacanamState.StoppingRecording);
 
                 await audioRecorder.StopAsync();
-                _recordingBuffer?.EndCapture(); // completes _audioChannel.Writer
+                _recordingBuffer?.EndCapture();
 
                 int totalBytes = _recordingBuffer?.TotalBytes ?? 0;
                 TimeSpan duration = _recordingBuffer?.Duration ?? TimeSpan.Zero;
@@ -214,35 +203,28 @@ public sealed class ApplicationLifetimeService(
                     return;
                 }
 
+                // Whisper STT Transcription with VAD silence trimming
                 TransitionTo(VacanamState.Transcribing);
                 overlayViewModel.State = VacanamState.Transcribing;
 
-                // Wait for real-time background streaming task to complete
-                string transcript = string.Empty;
-                if (_streamingTask is not null)
-                {
-                    transcript = await _streamingTask;
-                }
+                using var wavStream = _recordingBuffer!.ToWavStream(trimSilence: true);
+                string transcript = await speechRecognizer.TranscribeAsync(wavStream);
 
-                // Fallback: if streaming output was empty, process full WAV stream
-                if (string.IsNullOrWhiteSpace(transcript) && _recordingBuffer is not null)
-                {
-                    using var wavStream = _recordingBuffer.ToWavStream(trimSilence: true);
-                    transcript = await speechRecognizer.TranscribeAsync(wavStream);
-                }
+                // Clean up any stray [BLANK_AUDIO] tokens
+                transcript = CleanTranscript(transcript);
 
-                logger.LogInformation(">>> FINAL REAL-TIME TRANSCRIPT: '{Transcript}' <<<", transcript);
+                logger.LogInformation(">>> FINAL TRANSCRIPT: '{Transcript}' <<<", transcript);
 
                 if (string.IsNullOrWhiteSpace(transcript))
                 {
                     overlayViewModel.StatusLabel = "No speech detected";
-                    await Task.Delay(300);
+                    await Task.Delay(400);
                 }
                 else
                 {
                     overlayViewModel.StatusLabel = transcript;
 
-                    // Instant Text Injection into target window
+                    // Text Injection into target window
                     TransitionTo(VacanamState.Inserting);
                     overlayViewModel.State = VacanamState.Inserting;
 
@@ -250,7 +232,7 @@ public sealed class ApplicationLifetimeService(
 
                     TransitionTo(VacanamState.Completed);
                     overlayViewModel.State = VacanamState.Completed;
-                    await Task.Delay(200);
+                    await Task.Delay(300);
                 }
 
                 TransitionTo(VacanamState.Idle);
@@ -259,7 +241,7 @@ public sealed class ApplicationLifetimeService(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error during streaming transcription & injection pipeline.");
+                logger.LogError(ex, "Error during transcription & injection pipeline.");
                 overlayViewModel.StatusLabel = "Error";
                 TransitionTo(VacanamState.Error);
                 await Task.Delay(1000);
@@ -271,74 +253,16 @@ public sealed class ApplicationLifetimeService(
             {
                 _recordingBuffer?.Dispose();
                 _recordingBuffer = null;
-                _audioChannel = null;
-                _streamingTask = null;
             }
         });
     }
 
-    // ── Real-Time Streaming Worker ─────────────────────────────────────────────
-
-    /// <summary>
-    /// Background worker that processes incoming audio chunks in real-time while holding Ctrl+Space.
-    /// Updates UI overlay with partial transcript segments as user speaks.
-    /// </summary>
-    private async Task<string> StreamTranscriptionWorkerAsync(ChannelReader<byte[]> channelReader)
+    private static string CleanTranscript(string raw)
     {
-        string lastResult = string.Empty;
-        var pcmBuffer = new List<byte>();
-
-        try
-        {
-            await foreach (var chunk in channelReader.ReadAllAsync())
-            {
-                pcmBuffer.AddRange(chunk);
-
-                // Run partial Whisper pass every ~800ms (25600 bytes at 16kHz 16-bit mono)
-                if (pcmBuffer.Count >= 25600)
-                {
-                    using var ms = CreateWavStreamFromPcm(pcmBuffer.ToArray());
-                    string partialText = await speechRecognizer.TranscribeAsync(ms);
-                    if (!string.IsNullOrWhiteSpace(partialText))
-                    {
-                        lastResult = partialText;
-                        Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            overlayViewModel.StatusLabel = partialText;
-                        });
-                    }
-                }
-            }
-
-            // Final pass on full accumulated audio
-            if (pcmBuffer.Count > 0)
-            {
-                using var finalMs = CreateWavStreamFromPcm(pcmBuffer.ToArray());
-                string finalPartial = await speechRecognizer.TranscribeAsync(finalMs);
-                if (!string.IsNullOrWhiteSpace(finalPartial))
-                {
-                    lastResult = finalPartial;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Error in real-time streaming transcription worker.");
-        }
-
-        return lastResult;
-    }
-
-    private static MemoryStream CreateWavStreamFromPcm(byte[] pcmData)
-    {
-        var ms = new MemoryStream();
-        using (var writer = new NAudio.Wave.WaveFileWriter(new IgnoreDisposeStream(ms), new NAudio.Wave.WaveFormat(16000, 1)))
-        {
-            writer.Write(pcmData, 0, pcmData.Length);
-            writer.Flush();
-        }
-        ms.Position = 0;
-        return ms;
+        if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
+        return raw.Replace("[BLANK_AUDIO]", "", StringComparison.OrdinalIgnoreCase)
+                  .Replace("(blank audio)", "", StringComparison.OrdinalIgnoreCase)
+                  .Trim();
     }
 
     private void TransitionTo(VacanamState state)

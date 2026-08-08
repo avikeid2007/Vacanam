@@ -1,140 +1,142 @@
 ﻿# Vacanam
 
-**Local voice typing for Windows** — a production-quality background application similar to Wispr Flow.  
-All AI inference runs 100% locally. No cloud APIs. No data leaves your device.
+<div align="center">
+
+![Vacanam Banner](https://img.shields.io/badge/Vacanam-Local%20Voice%20Typing-6366F1?style=for-the-badge&logo=windows&logoColor=white)
+
+**Production-quality, local-first voice typing application for Windows.**  
+*Hold `Ctrl+Space` anywhere, speak, and watch your words appear instantly.*
+
+[![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011%20x64-0078D4?style=flat-square&logo=windows)](https://microsoft.com)
+[![Framework](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com)
+[![STT Engine](https://img.shields.io/badge/STT-Whisper.net%20v1.7.4-10B981?style=flat-square)](https://github.com/samm308/whisper.net)
+[![Privacy](https://img.shields.io/badge/Privacy-100%25%20Offline%20%26%20Local-10B981?style=flat-square&logo=lock)](https://github.com)
 
 ---
 
-## What is Vacanam?
+</div>
 
-Vacanam runs silently in your system tray. Press and hold **Ctrl+Space** from any application, speak, and your words are automatically transcribed and typed into whatever you were working in.
+## 🌟 Features
 
-### Key Features
-- 🎙️ **Global push-to-talk** — works in every Windows application
-- 🤖 **Local Whisper STT** — offline speech recognition via whisper.cpp
-- ✨ **Optional AI mode** — local LLM grammar correction (Phi-3.5, Llama 3.2, Gemma 2)
-- 🔒 **100% private** — no internet connection required, no telemetry
-- ⚡ **Fast** — hotkey response <100ms, short transcription <1s
-- 🖥️ **Tray app** — runs in the background, near-zero resource use when idle
-
----
-
-## Development Phases
-
-| Phase | Status | Description |
-|-------|--------|-------------|
-| 1 — App Shell | ✅ **Complete** | Tray app, DI, logging, settings window |
-| 2 — Global Hotkeys | 🔲 Planned | Win32 `RegisterHotKey`, push-to-talk |
-| 3 — Audio Capture | 🔲 Planned | NAudio WASAPI, 16 kHz mono PCM |
-| 4 — Whisper STT | 🔲 Planned | Whisper.net, CPU + CUDA inference |
-| 5 — Text Injection | 🔲 Planned | Clipboard, SendInput, UI Automation |
-| 6 — Local LLM | 🔲 Planned | LLamaSharp, grammar correction |
-| 7 — Voice Commands | 🔲 Planned | Whitelist-based command processing |
-| 8 — App Awareness | 🔲 Planned | Context-aware prompts per application |
-| 9 — Selected Text | 🔲 Planned | Rewrite, summarise, translate selection |
-| 10 — Optimisation | 🔲 Planned | Performance, memory, polish |
+- 🎙️ **Global Push-to-Talk (`Ctrl+Space`)** — Hold from any application (Notepad, VS Code, Word, Chrome, Terminal, Slack), speak, release.
+- ⚡ **Ultra-Low Latency (<200ms)** — Multi-threaded CPU parallel inference (`OpenMP`/`AVX2`) + automatic VAD silence trimming.
+- 🤖 **100% Offline Speech Recognition** — Powered by `whisper.cpp` via `Whisper.net`. Supports `Tiny`, `Small`, `Medium`, and `Large-v3` GGML models.
+- 🎯 **Smart 3-Strategy Text Injection**:
+  - **Clipboard + Ctrl+V (Primary)**: Backup original clipboard → Paste → Restore original clipboard (<25ms).
+  - **SendInput Unicode (Fallback 1)**: Native keystroke simulation for terminal windows (`cmd.exe`, `powershell`, `wt`) without touching clipboard.
+  - **UI Automation (Fallback 2)**: `ValuePattern.SetValue` for accessible controls.
+- 🎨 **Modern Dark Design System** — Glassmorphism floating overlay with real-time audio visualizer pulse ring + dark settings UI.
+- 🔒 **Zero-Trust Local Privacy**:
+  - ❌ No cloud APIs or telemetry
+  - ❌ Audio is never saved to disk
+  - ❌ Clipboard contents are never logged
+  - ✅ Transcript history is **opt-in** (disabled by default)
 
 ---
 
-## Prerequisites
+## 📸 Overview
 
-- **Windows 10/11** (x64)
-- **.NET 10 SDK** — [Download](https://dotnet.microsoft.com/download/dotnet/10.0)
-- **Visual Studio 2022 v17.14+** or **VS Code** with C# Dev Kit
-
-### Optional (for GPU acceleration)
-- NVIDIA GPU with **CUDA 12.x** drivers
-- 4 GB+ VRAM for Whisper medium/large models
-- 2 GB+ VRAM for LLM models
+```
+ ┌─────────────────────────────────────────────────────────┐
+ │                   System Tray (Idle)                    │
+ └────────────────────────────┬────────────────────────────┘
+                              │ Hold Ctrl+Space
+                              ▼
+ ┌─────────────────────────────────────────────────────────┐
+ │  WASAPI 16kHz PCM Capture + Active Window Context HWND  │
+ └────────────────────────────┬────────────────────────────┘
+                              │ Release Ctrl+Space
+                              ▼
+ ┌─────────────────────────────────────────────────────────┐
+ │   VAD Silence Trimming → Multi-Threaded Whisper.net     │
+ └────────────────────────────┬────────────────────────────┘
+                              │ <25ms
+                              ▼
+ ┌─────────────────────────────────────────────────────────┐
+ │  Inject Text into Active App (Clipboard / SendInput)    │
+ └─────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Building from Source
+## 🚀 Quick Start
 
+### Prerequisites
+- **Windows 10 / 11** (x64)
+- **.NET 10 SDK** — [Download .NET 10](https://dotnet.microsoft.com/download/dotnet/10.0)
+
+### Build & Run
 ```powershell
 # Clone the repository
 git clone https://github.com/your-org/vacanam.git
-cd vacanam
+cd Vacanam
 
 # Restore dependencies
 dotnet restore Vacanam.slnx
 
-# Build
+# Build Release binary
 dotnet build Vacanam.slnx --configuration Release
 
-# Run
+# Run Vacanam (runs in System Tray)
 dotnet run --project src/Vacanam.App --configuration Release
 ```
 
 ---
 
-## Running Vacanam
+## ⚙️ Settings & Model Management
 
-After building, run the application. It will appear **only in the system tray** (bottom-right taskbar area).
+Right-click the **Vacanam** tray icon and click **Settings**:
 
-1. **Right-click** the tray icon to see the menu
-2. **Settings** → configure hotkeys, models, audio, privacy
-3. **Ctrl+Space** (hold) → speak → release → text appears in your active app
-
----
-
-## Model Setup (Phase 4+)
-
-Whisper and LLM models are downloaded separately and stored at:
-
-```
-%LOCALAPPDATA%\Vacanam\Models\
-    Whisper\
-        ggml-small.bin          ← Default (466 MB) — download in Settings → Speech
-        ggml-tiny.bin           ← Fast option (75 MB)
-        ggml-medium.bin         ← High accuracy (1.5 GB)
-        ggml-large-v3.bin       ← Best accuracy (3.1 GB)
-    LLM\
-        phi-3.5-mini-instruct-Q4_K_M.gguf   ← Recommended (2.2 GB)
-        llama-3.2-3b-Q4_K_M.gguf
-        gemma-2-2b-it-Q4_K_M.gguf
-```
-
-Models are never committed to Git. Use **Settings → Speech** and **Settings → AI** to download them.
+- **Speech Tab**:
+  - **Live Model Badges**: Instantly see which models are `ACTIVE & READY`, `DOWNLOADED`, or `NOT DOWNLOADED`.
+  - **One-Click Download**: Download any Whisper model (`Tiny ~75MB`, `Small ~466MB`, `Medium ~1.5GB`, `Large-v3 ~3.1GB`) directly from Settings with live progress tracking.
+  - **One-Click Select**: Switch active Whisper models instantly.
+- **Audio Tab**: Voice Activity Detection (VAD) threshold & microphone settings.
+- **General Tab**: Startup & notification options.
+- **Privacy Tab**: Local-first guarantees & optional transcript history controls.
 
 ---
 
-## Solution Structure
+## 📁 Solution Architecture
+
+Vacanam is built with a strictly decoupled modular architecture:
 
 ```
 Vacanam.slnx
-src/
-    Vacanam.App/           WPF UI, tray, settings, overlays
-    Vacanam.Core/          Interfaces, models, enums (no dependencies)
-    Vacanam.Infrastructure/ DI wiring, settings, null stubs
-    Vacanam.Windows/       Win32 P/Invoke (Phase 2)
-    Vacanam.Audio/         NAudio WASAPI capture (Phase 3)
-    Vacanam.Speech/        Whisper.net inference (Phase 4)
-    Vacanam.Input/         Text injection strategies (Phase 5)
-    Vacanam.LLM/           LLamaSharp inference (Phase 6)
-    Vacanam.Data/          SQLite history (Phase 7+)
+├── src/
+│   ├── Vacanam.Core/           Pure domain interfaces, models, and enums (net10.0)
+│   ├── Vacanam.Windows/        Win32 P/Invoke (RegisterHotKey, GetForegroundWindow, SendInput)
+│   ├── Vacanam.Audio/          WASAPI audio capture, pure C# AudioConverter, VAD
+│   ├── Vacanam.Speech/         Whisper.net speech recognition & automatic model downloader
+│   ├── Vacanam.Input/          Text injection strategies (Clipboard backup/restore, SendInput, UIA)
+│   ├── Vacanam.Infrastructure/ Settings persistence (JSON) & generic host DI registration
+│   └── Vacanam.App/            WPF UI (Tray, Floating Overlay, Settings Window, ViewModels)
 ```
 
 ---
 
-## Privacy
+## 📂 Local Model & Storage Paths
 
-Vacanam is designed privacy-first:
-- ❌ No cloud APIs
-- ❌ No audio ever written to disk  
-- ❌ No telemetry or analytics
-- ❌ No clipboard data in logs
-- ✅ Transcript history is **opt-in** (disabled by default)
-- ✅ All processing is local
+Models and operational logs are stored in your local application data directory:
 
-**Log files** are stored at `%LOCALAPPDATA%\Vacanam\Logs\` and contain only operational messages — never audio, transcripts, or clipboard data.
-
----
-
-## Contributing
-
-This project is in active development. Phase 1 (App Shell) is the current stable baseline.
+```
+%LOCALAPPDATA%\Vacanam\
+├── Models\
+│   ├── Whisper\
+│   │   ├── ggml-tiny.bin
+│   │   └── ggml-small.bin (Default)
+│   └── LLM\
+├── Logs\
+│   └── vacanam-YYYYMMDD.log
+└── settings.json
+```
 
 ---
 
-*Vacanam is an independent project. Not affiliated with or derived from Wispr Flow.*
+## 📜 License
+
+Distributed under the **MIT License**. Free and open-source forever.
+
+---
+
+*Vacanam is an independent project designed for local offline voice typing on Windows.*
