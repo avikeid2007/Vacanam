@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Vacanam.App/Vacanam.App.csproj" />
+    <Project Path="src/Vacanam.Audio/Vacanam.Audio.csproj" />
+    <Project Path="src/Vacanam.Core/Vacanam.Core.csproj" />
+    <Project Path="src/Vacanam.Infrastructure/Vacanam.Infrastructure.csproj" />
+    <Project Path="src/Vacanam.Input/Vacanam.Input.csproj" />
+    <Project Path="src/Vacanam.Speech/Vacanam.Speech.csproj" />
+    <Project Path="src/Vacanam.Windows/Vacanam.Windows.csproj" />
+  </Folder>
+</Solution>

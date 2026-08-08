@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>preview</LangVersion>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>Vacanam.App</RootNamespace>
+    <AssemblyName>Vacanam</AssemblyName>
+    <ApplicationIcon>Resources\Icons\vacanam.ico</ApplicationIcon>
+    <Description>Vacanam - Local voice typing for Windows</Description>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vacanam.Infrastructure\Vacanam.Infrastructure.csproj" />
+    <ProjectReference Include="..\Vacanam.Core\Vacanam.Core.csproj" />
+    <ProjectReference Include="..\Vacanam.Windows\Vacanam.Windows.csproj" />
+    <ProjectReference Include="..\Vacanam.Audio\Vacanam.Audio.csproj" />
+    <ProjectReference Include="..\Vacanam.Speech\Vacanam.Speech.csproj" />
+    <ProjectReference Include="..\Vacanam.Input\Vacanam.Input.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
+    <PackageReference Include="Serilog" Version="4.3.0" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\Icons\vacanam.ico" />
+    <Resource Include="Resources\Icons\vacanam_recording.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>
+

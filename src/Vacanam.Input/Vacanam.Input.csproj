@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>preview</LangVersion>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>Vacanam.Input</RootNamespace>
+    <AssemblyName>Vacanam.Input</AssemblyName>
+    <Description>Text injection strategies (Clipboard + Ctrl+V, SendInput, UI Automation) for Vacanam.</Description>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vacanam.Core\Vacanam.Core.csproj" />
+    <ProjectReference Include="..\Vacanam.Windows\Vacanam.Windows.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+  </ItemGroup>
+
+</Project>

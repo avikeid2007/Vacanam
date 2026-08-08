@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>preview</LangVersion>
+    <RootNamespace>Vacanam.Infrastructure</RootNamespace>
+    <AssemblyName>Vacanam.Infrastructure</AssemblyName>
+    <Description>Dependency injection wiring, configuration, and null stubs for Vacanam.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Vacanam.Core\Vacanam.Core.csproj" />
+    <ProjectReference Include="..\Vacanam.Windows\Vacanam.Windows.csproj" />
+    <ProjectReference Include="..\Vacanam.Audio\Vacanam.Audio.csproj" />
+    <ProjectReference Include="..\Vacanam.Speech\Vacanam.Speech.csproj" />
+    <ProjectReference Include="..\Vacanam.Input\Vacanam.Input.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
+  </ItemGroup>
+
+</Project>

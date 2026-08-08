@@ -1,0 +1,21 @@
+## Build outputs
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+## Local Vacanam data (models, logs, settings)
+## These live in %LOCALAPPDATA%\Vacanam\ not in the repo
+
+## NuGet packages
+*.nupkg
+.nuget/
+
+## Rider / VS Code
+.idea/
+.vscode/
+
+## OS
+Thumbs.db
+.DS_Store

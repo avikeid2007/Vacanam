@@ -1,0 +1,85 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:tb="http://www.hardcodet.net/taskbar">
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         Vacanam System Tray Icon
+         The TaskbarIcon is declared here and instantiated in App.xaml.cs
+    ════════════════════════════════════════════════════════════════════════════ -->
+
+    <tb:TaskbarIcon x:Key="VacanamTrayIcon"
+                    x:Shared="false"
+                    IconSource="/Resources/Icons/vacanam.ico"
+                    ToolTipText="Vacanam — Ready (Ctrl+Space to record)"
+                    Visibility="Visible">
+
+        <tb:TaskbarIcon.ContextMenu>
+            <ContextMenu Background="#1A1A24"
+                         BorderBrush="#2A2A3D"
+                         BorderThickness="1"
+                         FontFamily="Segoe UI Variable Text, Segoe UI, sans-serif"
+                         FontSize="13">
+
+                <!-- App header (non-clickable branding row) -->
+                <MenuItem IsEnabled="False" Focusable="False">
+                    <MenuItem.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Vacanam"
+                                       Foreground="#6366F1"
+                                       FontWeight="SemiBold"
+                                       FontSize="13"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Text=" — Ready"
+                                       Foreground="#6B6B8A"
+                                       FontSize="12"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </MenuItem.Header>
+                </MenuItem>
+
+                <Separator Background="#2A2A3D"/>
+
+                <!-- Start Recording -->
+                <MenuItem Header="▶  Start Recording"
+                          Foreground="#F1F1F8"
+                          Command="{Binding StartRecordingManualCommand}">
+                    <MenuItem.ToolTip>
+                        <ToolTip Content="Or press Ctrl+Space from any application"/>
+                    </MenuItem.ToolTip>
+                </MenuItem>
+
+                <Separator Background="#2A2A3D"/>
+
+                <!-- Settings -->
+                <MenuItem Header="⚙  Settings"
+                          Foreground="#F1F1F8"
+                          Command="{Binding OpenSettingsCommand}"/>
+
+                <!-- Models -->
+                <MenuItem Header="⬇  Download Models"
+                          Foreground="#A0A0BC"
+                          IsEnabled="False"/>
+
+                <!-- Microphone -->
+                <MenuItem Header="🎙  Microphone"
+                          Foreground="#A0A0BC"
+                          IsEnabled="False"/>
+
+                <!-- History -->
+                <MenuItem Header="📋  History"
+                          Foreground="#A0A0BC"
+                          IsEnabled="False"/>
+
+                <Separator Background="#2A2A3D"/>
+
+                <!-- Exit -->
+                <MenuItem Header="✕  Exit"
+                          Foreground="#F1F1F8"
+                          Command="{Binding ExitApplicationCommand}"/>
+
+            </ContextMenu>
+        </tb:TaskbarIcon.ContextMenu>
+
+    </tb:TaskbarIcon>
+
+</ResourceDictionary>
