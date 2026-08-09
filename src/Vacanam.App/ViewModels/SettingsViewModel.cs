@@ -21,6 +21,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly IAudioRecorder _audioRecorder;
     private readonly Vacanam.LLM.Model.LlmModelManager _llmModelManager;
     private readonly ITranscriptHistoryRepository _historyRepository;
+    private readonly IAutoStartService _autoStartService;
     private readonly ILogger<SettingsViewModel> _logger;
     private AppSettings _originalSettings = new();
 
@@ -30,6 +31,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         IAudioRecorder audioRecorder,
         Vacanam.LLM.Model.LlmModelManager llmModelManager,
         ITranscriptHistoryRepository historyRepository,
+        IAutoStartService autoStartService,
         ILogger<SettingsViewModel> logger)
     {
         _settingsManager = settingsManager;
@@ -37,6 +39,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _audioRecorder = audioRecorder;
         _llmModelManager = llmModelManager;
         _historyRepository = historyRepository;
+        _autoStartService = autoStartService;
         _logger = logger;
 
         LoadFromSettings(_settingsManager.Load());
@@ -427,10 +430,11 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         var settings = BuildSettings();
         _settingsManager.Save(settings);
+        _autoStartService.SetAutoStart(settings.General.StartWithWindows);
         _originalSettings = settings;
         HasChanges = false;
         StatusMessage = "Settings saved.";
-        _logger.LogInformation("Settings saved by user.");
+        _logger.LogInformation("Settings saved by user. StartWithWindows: {Value}", settings.General.StartWithWindows);
         SaveCompleted?.Invoke(this, EventArgs.Empty);
     }
 

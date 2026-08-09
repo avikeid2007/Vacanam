@@ -33,6 +33,7 @@ public sealed class ApplicationLifetimeService(
     ITranscriptHistoryRepository historyRepository,
     IModelManager modelManager,
     SettingsManager settingsManager,
+    IAutoStartService autoStartService,
     IOptions<AppSettings> settings,
     MainViewModel mainViewModel,
     SettingsViewModel settingsViewModel,
@@ -59,6 +60,9 @@ public sealed class ApplicationLifetimeService(
             InitialiseAudioMeterTimer();
             ShowLaunchBanner();
         });
+
+        // Sync Windows Startup Registry state
+        autoStartService.SetAutoStart(settings.Value.General.StartWithWindows);
 
         speechRecognizer.SegmentReceived += OnTranscriptSegmentReceived;
 

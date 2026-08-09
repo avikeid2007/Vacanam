@@ -3,6 +3,7 @@ using Vacanam.Core.Interfaces;
 using Vacanam.Core.Models;
 using Vacanam.Windows.ForegroundWindow;
 using Vacanam.Windows.Hotkeys;
+using Vacanam.Windows.Services;
 
 namespace Vacanam.Windows.DependencyInjection;
 
@@ -18,11 +19,14 @@ public static class WindowsServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddVacanamWindowsServices(this IServiceCollection services)
     {
-        // Phase 2: Replace NullHotkeyService ? GlobalHotkeyService
+        // Phase 2: Replace NullHotkeyService -> GlobalHotkeyService
         services.AddSingleton<IGlobalHotkeyService, GlobalHotkeyService>();
 
-        // Phase 2: Replace NullForegroundWindowService ? WindowsForegroundWindowService
+        // Phase 2: Replace NullForegroundWindowService -> WindowsForegroundWindowService
         services.AddSingleton<IForegroundWindowService, WindowsForegroundWindowService>();
+
+        // Windows Auto-Start Registry Service
+        services.AddSingleton<IAutoStartService, WindowsAutoStartService>();
 
         return services;
     }
