@@ -1,0 +1,164 @@
+name: Build & Release Vacanam Installer
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'          # Triggers on version tags like v1.0.0, v1.2.3
+  workflow_dispatch:       # Allow manual trigger from GitHub Actions UI
+    inputs:
+      version:
+        description: 'Version to build (e.g. 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  PROJECT_PATH: src/Vacanam.App/Vacanam.App.csproj
+  SOLUTION_PATH: Vacanam.slnx
+  PUBLISH_DIR: publish
+  INSTALLER_DIR: installer
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────
+  build-and-package:
+    name: Build · Publish · Package Installer
+    runs-on: windows-latest
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ── 2. Resolve version ───────────────────────────────────────────────
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "push") {
+            $ver = "${{ github.ref_name }}" -replace '^v', ''
+          } else {
+            $ver = "${{ github.event.inputs.version }}"
+          }
+          echo "VERSION=$ver" >> $env:GITHUB_ENV
+          echo "version=$ver" >> $env:GITHUB_OUTPUT
+          Write-Host "Building version: $ver"
+
+      # ── 3. Setup .NET 10 ─────────────────────────────────────────────────
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # ── 4. Restore NuGet packages ────────────────────────────────────────
+      - name: Restore dependencies
+        run: dotnet restore ${{ env.SOLUTION_PATH }}
+
+      # ── 5. Build solution (verify no errors) ─────────────────────────────
+      - name: Build solution
+        run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
+
+      # ── 6. Publish self-contained single-file exe ────────────────────────
+      - name: Publish Vacanam (self-contained, win-x64)
+        run: |
+          dotnet publish ${{ env.PROJECT_PATH }} `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            --output ${{ env.PUBLISH_DIR }} `
+            /p:PublishSingleFile=true `
+            /p:IncludeNativeLibrariesForSelfExtract=true `
+            /p:EnableCompressionInSingleFile=true `
+            /p:AssemblyVersion=${{ env.VERSION }} `
+            /p:FileVersion=${{ env.VERSION }} `
+            /p:InformationalVersion=${{ env.VERSION }}
+
+      # ── 7. Create placeholder wizard images (if not present) ─────────────
+      - name: Prepare installer assets
+        shell: pwsh
+        run: |
+          $assetsDir = "installer/assets"
+          New-Item -ItemType Directory -Force -Path $assetsDir | Out-Null
+          # Create minimal BMP placeholders if custom images don't exist
+          if (-not (Test-Path "$assetsDir/wizard-banner.bmp")) {
+            Add-Type -AssemblyName System.Drawing
+            $bmp = New-Object System.Drawing.Bitmap(497, 314)
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $g.Clear([System.Drawing.Color]::FromArgb(18, 18, 26))
+            $g.Dispose()
+            $bmp.Save("$assetsDir/wizard-banner.bmp", [System.Drawing.Imaging.ImageFormat]::Bmp)
+            $bmp.Dispose()
+          }
+          if (-not (Test-Path "$assetsDir/wizard-small.bmp")) {
+            Add-Type -AssemblyName System.Drawing
+            $bmp = New-Object System.Drawing.Bitmap(55, 55)
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $g.Clear([System.Drawing.Color]::FromArgb(99, 102, 241))
+            $g.Dispose()
+            $bmp.Save("$assetsDir/wizard-small.bmp", [System.Drawing.Imaging.ImageFormat]::Bmp)
+            $bmp.Dispose()
+          }
+          Write-Host "Installer assets ready."
+
+      # ── 8. Compile Inno Setup installer ──────────────────────────────────
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer with Inno Setup
+        env:
+          APP_VERSION: ${{ env.VERSION }}
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          & $iscc "installer\Vacanam.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
+          Write-Host "Installer built successfully."
+
+      # ── 9. List installer output ─────────────────────────────────────────
+      - name: List installer artifacts
+        shell: pwsh
+        run: |
+          Get-ChildItem installer/ -Filter "*.exe" | ForEach-Object {
+            Write-Host "$($_.Name)  ($([math]::Round($_.Length / 1MB, 1)) MB)"
+          }
+
+      # ── 10. Upload installer as workflow artifact ─────────────────────────
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VacanamSetup-${{ env.VERSION }}
+          path: installer/VacanamSetup-${{ env.VERSION }}.exe
+          retention-days: 30
+
+      # ── 11. Create GitHub Release (only on tag push) ──────────────────────
+      - name: Create GitHub Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Vacanam v${{ env.VERSION }}"
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
+          body: |
+            ## 🎙️ Vacanam v${{ env.VERSION }}
+
+            **Local-first voice typing & AI text refinement for Windows 10/11 x64.**
+
+            ### Installation
+            1. Download `VacanamSetup-${{ env.VERSION }}.exe` below
+            2. Run the installer (no admin rights required)
+            3. Vacanam will launch in the System Tray — hold `Ctrl+Space` anywhere to dictate
+
+            ### What's new
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+
+            ### Requirements
+            - Windows 10 1809+ / Windows 11 (x64)
+            - ~150 MB disk space (Ultra Fast speech model downloaded on first run: ~75 MB)
+            - No internet required after installation
+
+            > 🔒 **100% Local & Offline** — No cloud APIs, no telemetry.
+          files: |
+            installer/VacanamSetup-${{ env.VERSION }}.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -19,3 +19,8 @@ obj/
 ## OS
 Thumbs.db
 .DS_Store
+
+## CI/CD publish & installer outputs
+publish/
+installer/*.exe
+installer/assets/
