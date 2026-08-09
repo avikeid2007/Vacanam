@@ -7,9 +7,11 @@ using Application = System.Windows.Application;
 using Vacanam.App.Services;
 using Vacanam.App.ViewModels;
 using Vacanam.Audio.DependencyInjection;
+using Vacanam.Core.Interfaces;
 using Vacanam.Core.Models;
 using Vacanam.Infrastructure.Configuration;
 using Vacanam.Infrastructure.DependencyInjection;
+using Vacanam.Infrastructure.Persistence;
 using Vacanam.Input.DependencyInjection;
 using Vacanam.LLM.DependencyInjection;
 using Vacanam.Speech.DependencyInjection;
@@ -74,6 +76,9 @@ public partial class App : Application
 
                     // Phase 6: register LLamaSharp Local LLM services
                     services.AddLocalLlmServices();
+
+                    // Phase 7: register SQLite Transcript History Repository
+                    services.AddSingleton<ITranscriptHistoryRepository, SqliteTranscriptHistoryRepository>();
 
                     // Register typed settings options
                     services.AddOptions<AppSettings>()

@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+
 using Vacanam.Core.Enums;
 
 namespace Vacanam.App.ViewModels;
@@ -25,7 +26,7 @@ public sealed partial class RecordingOverlayViewModel : ObservableObject
     {
         StatusLabel = value switch
         {
-            VacanamState.Recording => "Recording…",
+            VacanamState.Recording => "Listening…",
             VacanamState.StoppingRecording => "Processing…",
             VacanamState.Transcribing => "Transcribing…",
             VacanamState.Processing => "AI mode…",

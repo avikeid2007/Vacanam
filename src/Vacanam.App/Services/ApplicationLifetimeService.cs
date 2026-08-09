@@ -11,6 +11,7 @@ using Vacanam.Audio.Capture;
 using Vacanam.Core.Enums;
 using Vacanam.Core.Interfaces;
 using Vacanam.Core.Models;
+using Vacanam.Infrastructure.Configuration;
 
 namespace Vacanam.App.Services;
 
@@ -29,6 +30,9 @@ public sealed class ApplicationLifetimeService(
     ISpeechRecognizer speechRecognizer,
     ITextProcessor textProcessor,
     ITextInjector textInjector,
+    ITranscriptHistoryRepository historyRepository,
+    IModelManager modelManager,
+    SettingsManager settingsManager,
     IOptions<AppSettings> settings,
     MainViewModel mainViewModel,
     SettingsViewModel settingsViewModel,
@@ -53,6 +57,7 @@ public sealed class ApplicationLifetimeService(
             WireViewModelEvents();
             RegisterGlobalHotkey();
             InitialiseAudioMeterTimer();
+            ShowLaunchBanner();
         });
 
         speechRecognizer.SegmentReceived += OnTranscriptSegmentReceived;
@@ -81,6 +86,20 @@ public sealed class ApplicationLifetimeService(
     {
         _overlay = new RecordingOverlay(overlayViewModel);
         logger.LogDebug("Recording overlay initialised.");
+    }
+
+    private void ShowLaunchBanner()
+    {
+        try
+        {
+            var banner = new LaunchBannerWindow(settings.Value, modelManager, settingsManager);
+            banner.Show();
+            logger.LogInformation("Launch banner displayed.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to display launch banner.");
+        }
     }
 
     private void InitialiseAudioMeterTimer()
@@ -282,6 +301,27 @@ public sealed class ApplicationLifetimeService(
                     overlayViewModel.State = VacanamState.Inserting;
 
                     await textInjector.InjectAsync(transcript, _currentSessionContext);
+
+                    if (settings.Value.Privacy.SaveHistory)
+                    {
+                        try
+                        {
+                            var record = new TranscriptRecord(
+                                Id: 0,
+                                TimestampUtc: DateTime.UtcNow,
+                                RawTranscript: transcript,
+                                FinalText: transcript,
+                                TargetApp: string.IsNullOrWhiteSpace(_currentSessionContext.ProcessName) ? "Unknown" : _currentSessionContext.ProcessName,
+                                DurationSeconds: duration.TotalSeconds,
+                                WasAiEnhanced: isAiEnabled
+                            );
+                            await historyRepository.AddAsync(record);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogWarning(ex, "Failed to save transcript to local history database.");
+                        }
+                    }
 
                     TransitionTo(VacanamState.Completed);
                     overlayViewModel.State = VacanamState.Completed;

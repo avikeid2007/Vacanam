@@ -20,4 +20,7 @@ public interface IModelManager
 
     /// <summary>Returns true if the specified LLM model file exists on disk.</summary>
     bool LlmModelExists(string modelFileName);
+
+    /// <summary>Downloads the specified Whisper model if it does not already exist on disk.</summary>
+    Task EnsureWhisperModelDownloadedAsync(string modelSize, IProgress<double>? progress = null, CancellationToken cancellationToken = default);
 }

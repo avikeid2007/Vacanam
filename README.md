@@ -93,9 +93,10 @@ Right-click the **Vacanam** tray icon and click **Settings**:
   - **One-Click Download**: Download any Whisper model (`Tiny ~75MB`, `Small ~466MB`, `Medium ~1.5GB`, `Large-v3 ~3.1GB`) directly from Settings with live progress tracking.
   - **One-Click Select**: Switch active Whisper models instantly.
 - **Audio Tab**: Live **Microphone Volume Slider (0 - 100%)**, **Mute Microphone Toggle**, and Voice Activity Detection (VAD) threshold settings.
-- **AI Tab**: Customizable **System Prompt / Grammar Polish Rules**, **Reset to Default** button, and sub-400MB local LLM model selection & downloads (featuring 76.7 MB Gemma 4 E2B Assistant).
+- **AI Tab**: Customizable **System Prompt / Grammar Polish Rules**, **Reset to Default** button, and sub-400MB local LLM model selection & downloads (featuring Qwen 2.5 0.5B & Llama 3.2 1B).
+- **History Tab**: **Local SQLite Transcript Search**, instant real-time filtering, target application badges, one-click **Copy**, single-record deletion, and **Clear All History**.
 - **General Tab**: Startup & notification options.
-- **Privacy Tab**: Local-first guarantees & optional transcript history controls.
+- **Privacy Tab**: Local-first guarantees & opt-in transcript history toggles.
 
 ---
 

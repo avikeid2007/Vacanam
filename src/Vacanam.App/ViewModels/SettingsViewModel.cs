@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -10,7 +12,7 @@ namespace Vacanam.App.ViewModels;
 
 /// <summary>
 /// ViewModel for the Settings window. Manages all settings categories,
-/// model download statuses, and live model selection.
+/// model download statuses, live model selection, and local SQLite history search.
 /// </summary>
 public sealed partial class SettingsViewModel : ObservableObject
 {
@@ -18,6 +20,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly IModelManager _modelManager;
     private readonly IAudioRecorder _audioRecorder;
     private readonly Vacanam.LLM.Model.LlmModelManager _llmModelManager;
+    private readonly ITranscriptHistoryRepository _historyRepository;
     private readonly ILogger<SettingsViewModel> _logger;
     private AppSettings _originalSettings = new();
 
@@ -26,16 +29,19 @@ public sealed partial class SettingsViewModel : ObservableObject
         IModelManager modelManager,
         IAudioRecorder audioRecorder,
         Vacanam.LLM.Model.LlmModelManager llmModelManager,
+        ITranscriptHistoryRepository historyRepository,
         ILogger<SettingsViewModel> logger)
     {
         _settingsManager = settingsManager;
         _modelManager = modelManager;
         _audioRecorder = audioRecorder;
         _llmModelManager = llmModelManager;
+        _historyRepository = historyRepository;
         _logger = logger;
 
         LoadFromSettings(_settingsManager.Load());
         RefreshModelStatuses();
+        _ = RefreshHistoryAsync();
     }
 
     // ── General Tab ───────────────────────────────────────────────────────────
@@ -108,10 +114,10 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public List<WhisperModelItem> WhisperModels { get; } =
     [
-        new("tiny",      "Tiny",     "~75 MB",   "Fastest — good for short phrases"),
-        new("small",     "Small",    "~466 MB",  "Recommended — balanced speed and accuracy"),
-        new("medium",    "Medium",   "~1.5 GB",  "Better accuracy — requires more RAM"),
-        new("large-v3",  "Large v3", "~3.1 GB",  "Best accuracy — GPU strongly recommended"),
+        new("tiny",      "Ultra Fast",            "~75 MB",   "Fastest response — ideal for quick phrases & low-end PCs"),
+        new("small",     "Balanced (Recommended)", "~466 MB",  "Optimal speed & accuracy — recommended for everyday dictation"),
+        new("medium",    "High Precision",        "~1.5 GB",  "Higher accuracy — excellent for technical terms & complex speech"),
+        new("large-v3",  "Maximum Accuracy",      "~3.1 GB",  "Maximum precision — best accuracy for multi-language & accents"),
     ];
 
     [ObservableProperty]
@@ -188,6 +194,94 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private int _maxHistoryEntries = 1000;
 
+    // ── History Tab ───────────────────────────────────────────────────────────
+
+    [ObservableProperty]
+    private string _historySearchQuery = string.Empty;
+
+    partial void OnHistorySearchQueryChanged(string value)
+    {
+        _ = SearchHistoryAsync();
+    }
+
+    public ObservableCollection<TranscriptRecord> HistoryRecords { get; } = [];
+
+    [RelayCommand]
+    private async Task RefreshHistoryAsync()
+    {
+        await SearchHistoryAsync();
+    }
+
+    [RelayCommand]
+    private async Task SearchHistoryAsync()
+    {
+        try
+        {
+            var results = string.IsNullOrWhiteSpace(HistorySearchQuery)
+                ? await _historyRepository.GetRecentAsync(100)
+                : await _historyRepository.SearchAsync(HistorySearchQuery, 100);
+
+            HistoryRecords.Clear();
+            foreach (var record in results)
+            {
+                HistoryRecords.Add(record);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to search history.");
+        }
+    }
+
+    [RelayCommand]
+    private async Task ClearHistoryAsync()
+    {
+        try
+        {
+            await _historyRepository.ClearAllAsync();
+            HistoryRecords.Clear();
+            StatusMessage = "Transcript history cleared cleanly.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to clear history.");
+        }
+    }
+
+    [RelayCommand]
+    private async Task DeleteHistoryRecordAsync(long id)
+    {
+        try
+        {
+            await _historyRepository.DeleteByIdAsync(id);
+            var item = HistoryRecords.FirstOrDefault(r => r.Id == id);
+            if (item is not null)
+            {
+                HistoryRecords.Remove(item);
+            }
+            StatusMessage = "Transcript record deleted.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete transcript record {Id}.", id);
+        }
+    }
+
+    [RelayCommand]
+    private void CopyHistoryText(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+        try
+        {
+            Clipboard.SetText(text);
+            StatusMessage = "Copied transcript to clipboard!";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to copy text to clipboard.");
+        }
+    }
+
     // ── Status ────────────────────────────────────────────────────────────────
 
     [ObservableProperty]
@@ -202,7 +296,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     private void SelectWhisperModel(string modelId)
     {
         WhisperModelSize = modelId;
-        StatusMessage = $"Selected Whisper model: {modelId}";
+        var item = WhisperModels.FirstOrDefault(m => m.Id == modelId);
+        StatusMessage = $"Selected speech engine profile: {item?.DisplayName ?? modelId}";
     }
 
     [RelayCommand]
@@ -222,10 +317,7 @@ public sealed partial class SettingsViewModel : ObservableObject
                 item.StatusText = $"Downloading ({mb:F1} MB)...";
             });
 
-            if (_modelManager is Vacanam.Speech.Model.ModelManager manager)
-            {
-                await manager.EnsureWhisperModelDownloadedAsync(modelId, progress);
-            }
+            await _modelManager.EnsureWhisperModelDownloadedAsync(modelId, progress);
 
             StatusMessage = $"Whisper {item.DisplayName} model downloaded successfully!";
         }
