@@ -85,7 +85,12 @@
 2. Run `VacanamSetup-1.x.x.exe` (no administrative privileges required).
 3. Vacanam will launch automatically in your System Tray — hold `Ctrl+Space` anywhere to dictate.
 
-> ℹ️ **Windows SmartScreen Note**: If Windows Defender SmartScreen displays a *"Windows protected your PC"* popup during installation, click **More info** ➔ **Run anyway**. *(Free open-source code signing via SignPath.io is currently being configured).*
+> [!NOTE]
+> **Windows SmartScreen Note**:  
+> Because Vacanam is a free open-source desktop application compiled on GitHub Actions, Windows Defender SmartScreen may display a blue *"Windows protected your PC"* popup during installation:
+> 1. Click **More info** on the popup.
+> 2. Click **Run anyway** to proceed with installation.
+> *(As community downloads increase, Microsoft SmartScreen automatically builds reputation for future releases).*
 
 ### Prerequisites for Building from Source
 - **Windows 10 / 11** (x64)
