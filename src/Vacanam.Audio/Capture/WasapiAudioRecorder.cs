@@ -1,4 +1,4 @@
-﻿using NAudio.Wave;
+using NAudio.Wave;
 using NAudio.CoreAudioApi;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -17,6 +17,7 @@ public sealed class WasapiAudioRecorder : IAudioRecorder
     private readonly AppSettings _settings;
 
     private WasapiCapture? _capture;
+    private MMDevice? _currentDevice;
     private volatile float _audioLevel;
     private volatile bool _isRecording;
     private bool _disposed;
@@ -24,6 +25,87 @@ public sealed class WasapiAudioRecorder : IAudioRecorder
     public event EventHandler<AudioDataEventArgs>? DataAvailable;
     public double AudioLevel => _audioLevel;
     public bool IsRecording => _isRecording;
+
+    public bool IsMuted
+    {
+        get
+        {
+            try
+            {
+                if (_currentDevice is not null)
+                {
+                    return _currentDevice.AudioEndpointVolume.Mute;
+                }
+                using var enumerator = new MMDeviceEnumerator();
+                using var dev = SelectCaptureDevice(enumerator);
+                return dev.AudioEndpointVolume.Mute;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to query microphone mute status.");
+                return false;
+            }
+        }
+        set
+        {
+            try
+            {
+                if (_currentDevice is not null)
+                {
+                    _currentDevice.AudioEndpointVolume.Mute = value;
+                    return;
+                }
+                using var enumerator = new MMDeviceEnumerator();
+                using var dev = SelectCaptureDevice(enumerator);
+                dev.AudioEndpointVolume.Mute = value;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to set microphone mute state.");
+            }
+        }
+    }
+
+    public float MasterVolume
+    {
+        get
+        {
+            try
+            {
+                if (_currentDevice is not null)
+                {
+                    return _currentDevice.AudioEndpointVolume.MasterVolumeLevelScalar;
+                }
+                using var enumerator = new MMDeviceEnumerator();
+                using var dev = SelectCaptureDevice(enumerator);
+                return dev.AudioEndpointVolume.MasterVolumeLevelScalar;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to query microphone master volume.");
+                return 1.0f;
+            }
+        }
+        set
+        {
+            try
+            {
+                float clamped = Math.Clamp(value, 0.0f, 1.0f);
+                if (_currentDevice is not null)
+                {
+                    _currentDevice.AudioEndpointVolume.MasterVolumeLevelScalar = clamped;
+                    return;
+                }
+                using var enumerator = new MMDeviceEnumerator();
+                using var dev = SelectCaptureDevice(enumerator);
+                dev.AudioEndpointVolume.MasterVolumeLevelScalar = clamped;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to set microphone master volume.");
+            }
+        }
+    }
 
     public WasapiAudioRecorder(
         IOptions<AppSettings> settings,
@@ -49,15 +131,27 @@ public sealed class WasapiAudioRecorder : IAudioRecorder
         {
             _logger.LogInformation("Starting WASAPI audio capture.");
 
-            var device = SelectCaptureDevice();
-            _capture = new WasapiCapture(device, useEventSync: true, audioBufferMillisecondsLength: 50);
+            _currentDevice = SelectCaptureDevice();
+            _capture = new WasapiCapture(_currentDevice, useEventSync: true, audioBufferMillisecondsLength: 50);
 
             _logger.LogInformation(
                 "WASAPI device selected: {Name}, native format: {Rate} Hz {Bits}-bit {Ch}ch",
-                device.FriendlyName,
+                _currentDevice.FriendlyName,
                 _capture.WaveFormat.SampleRate,
                 _capture.WaveFormat.BitsPerSample,
                 _capture.WaveFormat.Channels);
+
+            // Log mute / volume diagnostics on start
+            bool isMuted = IsMuted;
+            float volumeLevel = MasterVolume;
+            if (isMuted)
+            {
+                _logger.LogWarning("Microphone '{Name}' is MUTED!", _currentDevice.FriendlyName);
+            }
+            else if (volumeLevel < 0.05f)
+            {
+                _logger.LogWarning("Microphone '{Name}' volume is extremely low ({Vol:P0}).", _currentDevice.FriendlyName, volumeLevel);
+            }
 
             _capture.DataAvailable += OnWasapiDataAvailable;
             _capture.RecordingStopped += OnRecordingStopped;
@@ -102,7 +196,7 @@ public sealed class WasapiAudioRecorder : IAudioRecorder
         try
         {
             using var enumerator = new MMDeviceEnumerator();
-            var defaultDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
+            var defaultDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Console);
 
             foreach (var device in enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active))
             {
@@ -187,31 +281,46 @@ public sealed class WasapiAudioRecorder : IAudioRecorder
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private MMDevice SelectCaptureDevice()
+    private MMDevice SelectCaptureDevice(MMDeviceEnumerator? enumerator = null)
     {
-        using var enumerator = new MMDeviceEnumerator();
-
-        var preferredId = _settings.Audio.PreferredDeviceId;
-        if (!string.IsNullOrEmpty(preferredId))
+        bool createdEnumerator = false;
+        if (enumerator is null)
         {
-            try
-            {
-                var preferred = enumerator.GetDevice(preferredId);
-                if (preferred is not null && preferred.State == DeviceState.Active)
-                {
-                    _logger.LogInformation("Using preferred microphone: {Name}", preferred.FriendlyName);
-                    return preferred;
-                }
-            }
-            catch
-            {
-                _logger.LogWarning("Preferred device ID {Id} not found. Falling back to default.", preferredId);
-            }
+            enumerator = new MMDeviceEnumerator();
+            createdEnumerator = true;
         }
 
-        var defaultDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Communications);
-        _logger.LogInformation("Using default microphone: {Name}", defaultDevice.FriendlyName);
-        return defaultDevice;
+        try
+        {
+            var preferredId = _settings.Audio.PreferredDeviceId;
+            if (!string.IsNullOrEmpty(preferredId))
+            {
+                try
+                {
+                    var preferred = enumerator.GetDevice(preferredId);
+                    if (preferred is not null && preferred.State == DeviceState.Active)
+                    {
+                        _logger.LogInformation("Using preferred microphone: {Name}", preferred.FriendlyName);
+                        return preferred;
+                    }
+                }
+                catch
+                {
+                    _logger.LogWarning("Preferred device ID {Id} not found. Falling back to default.", preferredId);
+                }
+            }
+
+            var defaultDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Console);
+            _logger.LogInformation("Using default microphone: {Name}", defaultDevice.FriendlyName);
+            return defaultDevice;
+        }
+        finally
+        {
+            if (createdEnumerator)
+            {
+                enumerator.Dispose();
+            }
+        }
     }
 
     private void CleanupCapture()
@@ -223,6 +332,8 @@ public sealed class WasapiAudioRecorder : IAudioRecorder
             _capture.Dispose();
             _capture = null;
         }
+        _currentDevice?.Dispose();
+        _currentDevice = null;
     }
 
     // ── IDisposable ────────────────────────────────────────────────────────────

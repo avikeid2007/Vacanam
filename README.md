@@ -1,4 +1,4 @@
-﻿# Vacanam
+# Vacanam
 
 <div align="center">
 
@@ -19,6 +19,7 @@
 ## 🌟 Features
 
 - 🎙️ **Global Push-to-Talk (`Ctrl+Space`)** — Hold from any application (Notepad, VS Code, Word, Chrome, Terminal, Slack), speak, release.
+- 🔇 **Microphone Health & Low Volume Alerts (<30%)** — Real-time detection of muted microphones and low volume levels (<30%), warning you instantly on the floating overlay (`Mic Muted 🔇` / `Mic Volume 20% 🔇`).
 - ⚡ **Ultra-Low Latency (<200ms)** — Multi-threaded CPU parallel inference (`OpenMP`/`AVX2`) + automatic VAD silence trimming.
 - 🤖 **100% Offline Speech Recognition** — Powered by `whisper.cpp` via `Whisper.net`. Supports `Tiny`, `Small`, `Medium`, and `Large-v3` GGML models.
 - 🎯 **Smart 3-Strategy Text Injection**:
@@ -91,7 +92,7 @@ Right-click the **Vacanam** tray icon and click **Settings**:
   - **Live Model Badges**: Instantly see which models are `ACTIVE & READY`, `DOWNLOADED`, or `NOT DOWNLOADED`.
   - **One-Click Download**: Download any Whisper model (`Tiny ~75MB`, `Small ~466MB`, `Medium ~1.5GB`, `Large-v3 ~3.1GB`) directly from Settings with live progress tracking.
   - **One-Click Select**: Switch active Whisper models instantly.
-- **Audio Tab**: Voice Activity Detection (VAD) threshold & microphone settings.
+- **Audio Tab**: Live **Microphone Volume Slider (0 - 100%)**, **Mute Microphone Toggle**, and Voice Activity Detection (VAD) threshold settings.
 - **General Tab**: Startup & notification options.
 - **Privacy Tab**: Local-first guarantees & optional transcript history controls.
 

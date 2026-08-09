@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using Vacanam.Core.Enums;
@@ -16,16 +16,19 @@ public sealed partial class SettingsViewModel : ObservableObject
 {
     private readonly SettingsManager _settingsManager;
     private readonly IModelManager _modelManager;
+    private readonly IAudioRecorder _audioRecorder;
     private readonly ILogger<SettingsViewModel> _logger;
     private AppSettings _originalSettings = new();
 
     public SettingsViewModel(
         SettingsManager settingsManager,
         IModelManager modelManager,
+        IAudioRecorder audioRecorder,
         ILogger<SettingsViewModel> logger)
     {
         _settingsManager = settingsManager;
         _modelManager = modelManager;
+        _audioRecorder = audioRecorder;
         _logger = logger;
 
         LoadFromSettings(_settingsManager.Load());
@@ -64,6 +67,30 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private string _selectedDeviceId = string.Empty;
+
+    [ObservableProperty]
+    private double _micVolume = 100;
+
+    partial void OnMicVolumeChanged(double value)
+    {
+        if (_audioRecorder is not null)
+        {
+            _audioRecorder.MasterVolume = (float)(value / 100.0);
+        }
+        HasChanges = true;
+    }
+
+    [ObservableProperty]
+    private bool _isMicMuted = false;
+
+    partial void OnIsMicMutedChanged(bool value)
+    {
+        if (_audioRecorder is not null)
+        {
+            _audioRecorder.IsMuted = value;
+        }
+        HasChanges = true;
+    }
 
     // ── Speech Tab ────────────────────────────────────────────────────────────
 
@@ -246,6 +273,11 @@ public sealed partial class SettingsViewModel : ObservableObject
         EnableVad = s.Audio.EnableVad;
         VadThreshold = s.Audio.VadThreshold;
         SelectedDeviceId = s.Audio.PreferredDeviceId;
+        if (_audioRecorder is not null)
+        {
+            MicVolume = Math.Round(_audioRecorder.MasterVolume * 100.0);
+            IsMicMuted = _audioRecorder.IsMuted;
+        }
         WhisperModelSize = s.Speech.ModelSize;
         WhisperDevice = s.Speech.Device;
         WhisperLanguage = s.Speech.Language;

@@ -1,4 +1,4 @@
-﻿using Hardcodet.Wpf.TaskbarNotification;
+using Hardcodet.Wpf.TaskbarNotification;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.IO;
@@ -93,6 +93,20 @@ public sealed class ApplicationLifetimeService(
                 double level = audioRecorder.AudioLevel;
                 mainViewModel.AudioLevel = level;
                 overlayViewModel.AudioLevel = level;
+
+                if (audioRecorder.IsMuted)
+                {
+                    overlayViewModel.StatusLabel = "Mic Muted 🔇";
+                }
+                else if (audioRecorder.MasterVolume < 0.30f)
+                {
+                    int volPercent = (int)(audioRecorder.MasterVolume * 100);
+                    overlayViewModel.StatusLabel = $"Mic Volume {volPercent}% 🔇 (Low)";
+                }
+                else if (overlayViewModel.StatusLabel.StartsWith("Mic Muted") || overlayViewModel.StatusLabel.StartsWith("Mic Volume"))
+                {
+                    overlayViewModel.StatusLabel = "Recording…";
+                }
             }
         };
     }
@@ -217,8 +231,20 @@ public sealed class ApplicationLifetimeService(
 
                 if (string.IsNullOrWhiteSpace(transcript))
                 {
-                    overlayViewModel.StatusLabel = "No speech detected";
-                    await Task.Delay(400);
+                    if (audioRecorder.IsMuted)
+                    {
+                        overlayViewModel.StatusLabel = "Mic is Muted 🔇";
+                    }
+                    else if (audioRecorder.MasterVolume < 0.30f)
+                    {
+                        int volPercent = (int)(audioRecorder.MasterVolume * 100);
+                        overlayViewModel.StatusLabel = $"Mic volume is low ({volPercent}%) 🔇";
+                    }
+                    else
+                    {
+                        overlayViewModel.StatusLabel = "No speech detected";
+                    }
+                    await Task.Delay(800);
                 }
                 else
                 {

@@ -12,6 +12,12 @@ public interface IAudioRecorder : IDisposable
     /// <summary>Current audio level (0.0 = silence, 1.0 = peak). Updated continuously while recording.</summary>
     double AudioLevel { get; }
 
+    /// <summary>True if the active microphone endpoint volume is muted.</summary>
+    bool IsMuted { get; set; }
+
+    /// <summary>Master volume scalar of active microphone endpoint (0.0 = 0%, 1.0 = 100%).</summary>
+    float MasterVolume { get; set; }
+
     /// <summary>True if the recorder is currently capturing.</summary>
     bool IsRecording { get; }
 
