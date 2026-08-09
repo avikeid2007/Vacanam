@@ -64,7 +64,7 @@ jobs:
       - name: Build solution
         run: dotnet build ${{ env.SOLUTION_PATH }} --configuration Release --no-restore
 
-      # ── 6. Publish self-contained single-file exe ────────────────────────
+      # ── 6. Publish self-contained application for installer ─────────────
       - name: Publish Vacanam (self-contained, win-x64)
         run: |
           dotnet publish ${{ env.PROJECT_PATH }} `
@@ -72,9 +72,6 @@ jobs:
             --runtime win-x64 `
             --self-contained true `
             --output ${{ env.PUBLISH_DIR }} `
-            /p:PublishSingleFile=true `
-            /p:IncludeNativeLibrariesForSelfExtract=true `
-            /p:EnableCompressionInSingleFile=true `
             /p:AssemblyVersion=${{ env.VERSION }} `
             /p:FileVersion=${{ env.VERSION }} `
             /p:InformationalVersion=${{ env.VERSION }}

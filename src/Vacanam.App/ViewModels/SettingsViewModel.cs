@@ -447,6 +447,29 @@ public sealed partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void OpenLogFolder()
+    {
+        try
+        {
+            string logsDir = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Vacanam", "Logs");
+            System.IO.Directory.CreateDirectory(logsDir);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = logsDir,
+                UseShellExecute = true,
+                Verb = "open"
+            });
+            _logger.LogInformation("Opened log folder at {Path}", logsDir);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open log folder.");
+        }
+    }
+
+    [RelayCommand]
     private void ResetToDefaults()
     {
         LoadFromSettings(new AppSettings());

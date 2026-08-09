@@ -349,10 +349,10 @@ public sealed class ApplicationLifetimeService(
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error during transcription & injection pipeline.");
-                overlayViewModel.StatusLabel = "Error";
+                logger.LogError(ex, "Error during transcription & injection pipeline: {Message}", ex.Message);
+                overlayViewModel.StatusLabel = $"Error: {ex.Message}";
                 TransitionTo(VacanamState.Error);
-                await Task.Delay(1000);
+                await Task.Delay(2500);
                 TransitionTo(VacanamState.Idle);
                 overlayViewModel.State = VacanamState.Idle;
                 HideOverlay();

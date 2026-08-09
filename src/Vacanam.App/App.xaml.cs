@@ -26,11 +26,26 @@ namespace Vacanam.App;
 /// </summary>
 public partial class App : Application
 {
+    private const string SingleInstanceMutexName = @"Global\Vacanam_SingleInstance_Mutex_F3A2B1C4";
+    private static Mutex? _singleInstanceMutex;
     private IHost? _host;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // Single-instance check via system-wide named Mutex
+        _singleInstanceMutex = new Mutex(true, SingleInstanceMutexName, out bool createdNew);
+        if (!createdNew)
+        {
+            MessageBox.Show(
+                "Vacanam is already running in your system tray.\n\nLook for the 🎙 icon near your system clock (bottom right).",
+                "Vacanam — Already Running",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            Shutdown(0);
+            return;
+        }
 
         // Configure Serilog early so startup messages are captured
         var logsDir = Path.Combine(
@@ -134,6 +149,17 @@ public partial class App : Application
             {
                 Log.Error(ex, "Error during host shutdown.");
             }
+        }
+
+        if (_singleInstanceMutex is not null)
+        {
+            try
+            {
+                _singleInstanceMutex.ReleaseMutex();
+            }
+            catch { }
+            _singleInstanceMutex.Dispose();
+            _singleInstanceMutex = null;
         }
 
         Log.CloseAndFlush();

@@ -115,6 +115,18 @@
                         <TextBlock Style="{StaticResource CaptionStyle}"
                                    Text="Fast: no LLM. AI: grammar correction. Command: voice actions."
                                    Margin="0,6,0,0" TextWrapping="Wrap"/>
+
+                        <Separator Style="{StaticResource SectionSeparatorStyle}"/>
+
+                        <TextBlock Style="{StaticResource SubheadingStyle}" Text="Diagnostics &amp; Logs" Margin="0,0,0,8"/>
+                        <Button Style="{StaticResource VacanamSecondaryButtonStyle}"
+                                Content="📁  Open Log Folder"
+                                Command="{Binding OpenLogFolderCommand}"
+                                Width="180"
+                                HorizontalAlignment="Left"/>
+                        <TextBlock Style="{StaticResource CaptionStyle}"
+                                   Text="Opens %LOCALAPPDATA%\Vacanam\Logs in Windows Explorer for troubleshooting."
+                                   Margin="0,6,0,0" TextWrapping="Wrap"/>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
