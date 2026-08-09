@@ -74,34 +74,7 @@ jobs:
             /p:FileVersion=${{ env.VERSION }} `
             /p:InformationalVersion=${{ env.VERSION }}
 
-      # ── 7. Create placeholder wizard images (if not present) ─────────────
-      - name: Prepare installer assets
-        shell: pwsh
-        run: |
-          $assetsDir = "installer/assets"
-          New-Item -ItemType Directory -Force -Path $assetsDir | Out-Null
-          # Create minimal BMP placeholders if custom images don't exist
-          if (-not (Test-Path "$assetsDir/wizard-banner.bmp")) {
-            Add-Type -AssemblyName System.Drawing
-            $bmp = New-Object System.Drawing.Bitmap(497, 314)
-            $g = [System.Drawing.Graphics]::FromImage($bmp)
-            $g.Clear([System.Drawing.Color]::FromArgb(18, 18, 26))
-            $g.Dispose()
-            $bmp.Save("$assetsDir/wizard-banner.bmp", [System.Drawing.Imaging.ImageFormat]::Bmp)
-            $bmp.Dispose()
-          }
-          if (-not (Test-Path "$assetsDir/wizard-small.bmp")) {
-            Add-Type -AssemblyName System.Drawing
-            $bmp = New-Object System.Drawing.Bitmap(55, 55)
-            $g = [System.Drawing.Graphics]::FromImage($bmp)
-            $g.Clear([System.Drawing.Color]::FromArgb(99, 102, 241))
-            $g.Dispose()
-            $bmp.Save("$assetsDir/wizard-small.bmp", [System.Drawing.Imaging.ImageFormat]::Bmp)
-            $bmp.Dispose()
-          }
-          Write-Host "Installer assets ready."
-
-      # ── 8. Compile Inno Setup installer ──────────────────────────────────
+      # ── 7. Compile Inno Setup installer ──────────────────────────────────
       - name: Install Inno Setup
         run: choco install innosetup --no-progress -y
 

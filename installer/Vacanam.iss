@@ -1,7 +1,8 @@
 ; ═══════════════════════════════════════════════════════════════════════════
 ;  Vacanam Installer Script — Inno Setup 6.x
-;  Produces: VacanamSetup-{version}.exe
-;  Target:   Windows 10 / 11  x64
+;  This file lives in: installer/Vacanam.iss
+;  All paths are relative to this file's directory (installer/)
+;  Produces: installer/VacanamSetup-{version}.exe
 ; ═══════════════════════════════════════════════════════════════════════════
 
 #define AppName      "Vacanam"
@@ -24,7 +25,8 @@ AppUpdatesURL={#AppURL}/releases
 DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 AllowNoIcons=yes
-OutputDir=installer
+; OutputDir is relative to the .iss file location (installer/)
+OutputDir=.
 OutputBaseFilename=VacanamSetup-{#AppVersion}
 Compression=lzma2/ultra64
 SolidCompression=yes
@@ -32,13 +34,11 @@ WizardStyle=modern
 PrivilegesRequired=lowest
 ArchitecturesInstallIn64BitMode=x64compatible
 ArchitecturesAllowed=x64compatible
-; Require Windows 10 1809+ (build 17763)
 MinVersion=10.0.17763
 UninstallDisplayIcon={app}\{#AppExeName}
 UninstallDisplayName={#AppName}
-SetupIconFile=src\Vacanam.App\Resources\Icons\vacanam.ico
-WizardImageFile=installer\assets\wizard-banner.bmp
-WizardSmallImageFile=installer\assets\wizard-small.bmp
+; Icon path relative to installer/ directory
+SetupIconFile=..\src\Vacanam.App\Resources\Icons\vacanam.ico
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -48,8 +48,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "startupicon"; Description: "Launch Vacanam automatically when Windows starts"; GroupDescription: "Startup"
 
 [Files]
-; Main publish output (self-contained, single-file)
-Source: "publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; publish/ is at repo root, so relative to installer/ it is ..\publish\
+Source: "..\publish\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
@@ -57,7 +57,6 @@ Name: "{group}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
 [Registry]
-; "Start with Windows" — mirrors Vacanam's own StartWithWindows setting
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Vacanam"; ValueData: """{app}\{#AppExeName}"""; Flags: uninsdeletevalue; Tasks: startupicon
 
 [Run]
@@ -67,5 +66,4 @@ Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(
 Filename: "taskkill.exe"; Parameters: "/IM {#AppExeName} /F"; Flags: runhidden skipifdoesntexist
 
 [UninstallDelete]
-; Remove user data directory on uninstall (optional — user is prompted via code below)
 Type: dirifempty; Name: "{app}"
