@@ -24,6 +24,11 @@ jobs:
     name: Build · Publish · Package Installer
     runs-on: windows-latest
 
+    # Grant GITHUB_TOKEN permission to create GitHub Releases
+    permissions:
+      contents: write   # Required: create releases & upload release assets
+      actions: read     # Required: read workflow artifacts
+
     steps:
       # ── 1. Checkout ──────────────────────────────────────────────────────
       - name: Checkout repository
