@@ -141,6 +141,8 @@ public sealed class ApplicationLifetimeService(
     {
         mainViewModel.SettingsRequested += OnSettingsRequested;
         mainViewModel.ExitRequested += OnExitRequested;
+        mainViewModel.StartRecordingRequested += OnHotkeyPressed;
+        mainViewModel.StopRecordingRequested += OnHotkeyReleased;
     }
 
     private void RegisterGlobalHotkey()

@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using Vacanam.Core.Enums;
@@ -89,14 +89,24 @@ public sealed partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void StartRecordingManual()
+    private void ToggleRecording()
     {
-        // Phase 2: will wire to IGlobalHotkeyService
-        _logger.LogDebug("Manual recording start (stub — Phase 2).");
+        if (CurrentState == VacanamState.Recording)
+        {
+            _logger.LogDebug("Manual stop recording invoked.");
+            StopRecordingRequested?.Invoke(this, EventArgs.Empty);
+        }
+        else if (CurrentState == VacanamState.Idle)
+        {
+            _logger.LogDebug("Manual start recording invoked.");
+            StartRecordingRequested?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     // ── Events (for ApplicationLifetimeService) ───────────────────────────────
 
     public event EventHandler? SettingsRequested;
     public event EventHandler? ExitRequested;
+    public event EventHandler? StartRecordingRequested;
+    public event EventHandler? StopRecordingRequested;
 }
