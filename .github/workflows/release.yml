@@ -76,6 +76,17 @@ jobs:
             /p:FileVersion=${{ env.VERSION }} `
             /p:InformationalVersion=${{ env.VERSION }}
 
+      # ── 6b. Sign binary with Code Signing Certificate (Avnish Kumar) ──────
+      - name: Sign Vacanam.exe
+        if: ${{ secrets.CODESIGN_PFX != '' }}
+        shell: pwsh
+        run: |
+          $pfxBytes = [System.Convert]::FromBase64String("${{ secrets.CODESIGN_PFX }}")
+          [System.IO.File]::WriteAllBytes("installer\cert.pfx", $pfxBytes)
+          $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" | Select-Object -First 1 -ExpandProperty FullName
+          & $signtool sign /f "installer\cert.pfx" /p "${{ secrets.CODESIGN_PASSWORD }}" /tr http://timestamp.digicert.com /td sha256 /fd sha256 "${{ env.PUBLISH_DIR }}\Vacanam.exe"
+          Write-Host "Vacanam.exe digitally signed."
+
       # ── 7. Compile Inno Setup installer ──────────────────────────────────
       - name: Install Inno Setup
         run: choco install innosetup --no-progress -y
@@ -89,17 +100,15 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
           Write-Host "Installer built successfully."
 
-      # ── 8. SignPath Open Source Code Signing (Optional if secrets are set) ──
-      - name: Submit for SignPath Code Signing
-        if: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
-        uses: signpath/github-action-submit-signing-request@v1
-        with:
-          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
-          organization-id: '${{ secrets.SIGNPATH_ORGANIZATION_ID }}'
-          project-slug: 'vacanam'
-          signing-policy-slug: 'release-signing'
-          artifact-configuration-slug: 'installer'
-          github-artifact-name: 'VacanamSetup-${{ env.VERSION }}'
+      # ── 8. Sign Installer Package ─────────────────────────────────────────
+      - name: Sign VacanamSetup.exe
+        if: ${{ secrets.CODESIGN_PFX != '' }}
+        shell: pwsh
+        run: |
+          $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" | Select-Object -First 1 -ExpandProperty FullName
+          & $signtool sign /f "installer\cert.pfx" /p "${{ secrets.CODESIGN_PASSWORD }}" /tr http://timestamp.digicert.com /td sha256 /fd sha256 "installer\VacanamSetup-${{ env.VERSION }}.exe"
+          Remove-Item "installer\cert.pfx" -Force -ErrorAction SilentlyContinue
+          Write-Host "VacanamSetup-${{ env.VERSION }}.exe digitally signed."
 
       # ── 9. List installer output ─────────────────────────────────────────
       - name: List installer artifacts

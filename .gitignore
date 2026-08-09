@@ -23,4 +23,6 @@ Thumbs.db
 ## CI/CD publish & installer outputs
 publish/
 installer/*.exe
+installer/*.pfx
+installer/*_pfx_base64.txt
 installer/assets/
