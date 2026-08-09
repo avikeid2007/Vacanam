@@ -78,13 +78,19 @@ jobs:
 
       # ── 6b. Sign binary with Code Signing Certificate (Avnish Kumar) ──────
       - name: Sign Vacanam.exe
-        if: ${{ secrets.CODESIGN_PFX != '' }}
+        env:
+          CODESIGN_PFX: ${{ secrets.CODESIGN_PFX }}
+          CODESIGN_PASSWORD: ${{ secrets.CODESIGN_PASSWORD }}
         shell: pwsh
         run: |
-          $pfxBytes = [System.Convert]::FromBase64String("${{ secrets.CODESIGN_PFX }}")
+          if ([string]::IsNullOrWhiteSpace($env:CODESIGN_PFX)) {
+            Write-Host "CODESIGN_PFX secret not provided. Skipping binary signing."
+            exit 0
+          }
+          $pfxBytes = [System.Convert]::FromBase64String($env:CODESIGN_PFX)
           [System.IO.File]::WriteAllBytes("installer\cert.pfx", $pfxBytes)
           $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" | Select-Object -First 1 -ExpandProperty FullName
-          & $signtool sign /f "installer\cert.pfx" /p "${{ secrets.CODESIGN_PASSWORD }}" /tr http://timestamp.digicert.com /td sha256 /fd sha256 "${{ env.PUBLISH_DIR }}\Vacanam.exe"
+          & $signtool sign /f "installer\cert.pfx" /p "$env:CODESIGN_PASSWORD" /tr http://timestamp.digicert.com /td sha256 /fd sha256 "${{ env.PUBLISH_DIR }}\Vacanam.exe"
           Write-Host "Vacanam.exe digitally signed."
 
       # ── 7. Compile Inno Setup installer ──────────────────────────────────
@@ -102,11 +108,17 @@ jobs:
 
       # ── 8. Sign Installer Package ─────────────────────────────────────────
       - name: Sign VacanamSetup.exe
-        if: ${{ secrets.CODESIGN_PFX != '' }}
+        env:
+          CODESIGN_PFX: ${{ secrets.CODESIGN_PFX }}
+          CODESIGN_PASSWORD: ${{ secrets.CODESIGN_PASSWORD }}
         shell: pwsh
         run: |
+          if ([string]::IsNullOrWhiteSpace($env:CODESIGN_PFX)) {
+            Write-Host "CODESIGN_PFX secret not provided. Skipping installer signing."
+            exit 0
+          }
           $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" | Select-Object -First 1 -ExpandProperty FullName
-          & $signtool sign /f "installer\cert.pfx" /p "${{ secrets.CODESIGN_PASSWORD }}" /tr http://timestamp.digicert.com /td sha256 /fd sha256 "installer\VacanamSetup-${{ env.VERSION }}.exe"
+          & $signtool sign /f "installer\cert.pfx" /p "$env:CODESIGN_PASSWORD" /tr http://timestamp.digicert.com /td sha256 /fd sha256 "installer\VacanamSetup-${{ env.VERSION }}.exe"
           Remove-Item "installer\cert.pfx" -Force -ErrorAction SilentlyContinue
           Write-Host "VacanamSetup-${{ env.VERSION }}.exe digitally signed."
 
