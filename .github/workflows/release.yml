@@ -89,6 +89,18 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
           Write-Host "Installer built successfully."
 
+      # ── 8. SignPath Open Source Code Signing (Optional if secrets are set) ──
+      - name: Submit for SignPath Code Signing
+        if: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
+          organization-id: '${{ secrets.SIGNPATH_ORGANIZATION_ID }}'
+          project-slug: 'vacanam'
+          signing-policy-slug: 'release-signing'
+          artifact-configuration-slug: 'installer'
+          github-artifact-name: 'VacanamSetup-${{ env.VERSION }}'
+
       # ── 9. List installer output ─────────────────────────────────────────
       - name: List installer artifacts
         shell: pwsh
@@ -119,18 +131,17 @@ jobs:
 
             **Local-first voice typing & AI text refinement for Windows 10/11 x64.**
 
-            ### Installation
+            ### 📦 Installation
             1. Download `VacanamSetup-${{ env.VERSION }}.exe` below
             2. Run the installer (no admin rights required)
             3. Vacanam will launch in the System Tray — hold `Ctrl+Space` anywhere to dictate
 
-            ### What's new
-            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+            > ℹ️ **Windows SmartScreen Note**: If Windows shows a *"Windows protected your PC"* blue popup, click **More info** ➔ **Run anyway**. (Code signing via SignPath is currently in progress).
 
-            ### Requirements
+            ### ⚡ Requirements
             - Windows 10 1809+ / Windows 11 (x64)
-            - ~150 MB disk space (Ultra Fast speech model downloaded on first run: ~75 MB)
-            - No internet required after installation
+            - ~150 MB disk space (Ultra Fast speech model auto-downloads on first run: ~75 MB)
+            - No internet required after initial setup
 
             > 🔒 **100% Local & Offline** — No cloud APIs, no telemetry.
           files: |

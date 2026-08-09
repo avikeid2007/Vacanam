@@ -78,13 +78,20 @@
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start & Installation
 
-### Prerequisites
+### 📥 Download Installer
+1. Download the latest installer `VacanamSetup-1.x.x.exe` from [GitHub Releases](https://github.com/avikeid2007/Vacanam/releases/latest).
+2. Run `VacanamSetup-1.x.x.exe` (no administrative privileges required).
+3. Vacanam will launch automatically in your System Tray — hold `Ctrl+Space` anywhere to dictate.
+
+> ℹ️ **Windows SmartScreen Note**: If Windows Defender SmartScreen displays a *"Windows protected your PC"* popup during installation, click **More info** ➔ **Run anyway**. *(Free open-source code signing via SignPath.io is currently being configured).*
+
+### Prerequisites for Building from Source
 - **Windows 10 / 11** (x64)
 - **.NET 10 SDK** — [Download .NET 10](https://dotnet.microsoft.com/download/dotnet/10.0)
 
-### Build & Run
+### Build & Run from Source
 ```powershell
 # Clone the repository
 git clone https://github.com/your-org/vacanam.git
