@@ -1,41 +1,49 @@
-# Vacanam
+# Vacanam 🎙️
 
 <div align="center">
 
 ![Vacanam Banner](https://img.shields.io/badge/Vacanam-Local%20Voice%20Typing-6366F1?style=for-the-badge&logo=windows&logoColor=white)
 
-**Production-quality, local-first voice typing application for Windows.**  
-*Hold `Ctrl+Space` anywhere, speak, and watch your words appear instantly.*
+**Production-quality, local-first voice typing and AI text refinement for Windows.**  
+*Hold `Ctrl+Space` anywhere, speak naturally, and watch your polished words appear instantly.*
 
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011%20x64-0078D4?style=flat-square&logo=windows)](https://microsoft.com)
 [![Framework](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com)
 [![STT Engine](https://img.shields.io/badge/STT-Whisper.net%20v1.7.4-10B981?style=flat-square)](https://github.com/samm308/whisper.net)
+[![LLM Engine](https://img.shields.io/badge/LLM-LLamaSharp%20v0.27.0-837AF9?style=flat-square)](https://github.com/SciSharp/LLamaSharp)
+[![Database](https://img.shields.io/badge/Database-SQLite%20(WAL)-003B57?style=flat-square&logo=sqlite)](https://sqlite.org)
 [![Privacy](https://img.shields.io/badge/Privacy-100%25%20Offline%20%26%20Local-10B981?style=flat-square&logo=lock)](https://github.com)
 
 ---
 
 </div>
 
-## 🌟 Features
+## 🌟 Key Features
 
-- 🎙️ **Global Push-to-Talk (`Ctrl+Space`)** — Hold from any application (Notepad, VS Code, Word, Chrome, Terminal, Slack), speak, release.
+- 🎙️ **Global Push-to-Talk (`Ctrl+Space`)** — Hold from any application (Notepad, VS Code, Word, Chrome, Terminal, Slack, Outlook), speak, release.
+- 🚀 **Zero-Configuration Auto-Setup** — Launches with a sleek animated splash banner. If no speech model is downloaded on launch, Vacanam automatically downloads and selects the **Ultra Fast (`tiny` ~75 MB)** model.
+- 🗣️ **User-Centric Speech Engine Profiles**:
+  - **`⚡ Ultra Fast`** (`tiny` ~75 MB) — Instant response for short phrases & low-end PCs.
+  - **`⭐ Balanced (Recommended)`** (`small` ~466 MB) — Optimal balance of speed and high accuracy.
+  - **`🎯 High Precision`** (`medium` ~1.5 GB) — Exceptional accuracy for technical & complex terms.
+  - **`👑 Maximum Accuracy`** (`large-v3` ~3.1 GB) — Maximum precision for multi-language speech & accents.
+- 🤖 **Local LLM Text Refinement (AI Mode)** — Sub-second CPU grammar polish using local GGUF models (`Qwen2.5-0.5B-Instruct` & `Llama-3.2-1B-Instruct`) via `LLamaSharp`. Custom System Prompts editable directly in Settings.
+- 📜 **Local SQLite Transcript History & Search** — Opt-in local SQLite database (`%LOCALAPPDATA%\Vacanam\history.db` in WAL mode) saving timestamps, raw speech, polished text, and target app badges (`devenv`, `notepad`, `chrome`). Features instant real-time search, one-click **Copy**, and single-entry deletion.
 - 🔇 **Microphone Health & Low Volume Alerts (<30%)** — Real-time detection of muted microphones and low volume levels (<30%), warning you instantly on the floating overlay (`Mic Muted 🔇` / `Mic Volume 20% 🔇`).
-- ⚡ **Ultra-Low Latency (<200ms)** — Multi-threaded CPU parallel inference (`OpenMP`/`AVX2`) + automatic VAD silence trimming.
-- 🤖 **100% Offline Speech Recognition** — Powered by `whisper.cpp` via `Whisper.net`. Supports `Tiny`, `Small`, `Medium`, and `Large-v3` GGML models.
+- 🎨 **Windows 11 Fluent Dark UI** — Animated Launch Banner, glassmorphic floating overlay with audio visualizer pulse ring, and dark Settings UI.
 - 🎯 **Smart 3-Strategy Text Injection**:
   - **Clipboard + Ctrl+V (Primary)**: Backup original clipboard → Paste → Restore original clipboard (<25ms).
   - **SendInput Unicode (Fallback 1)**: Native keystroke simulation for terminal windows (`cmd.exe`, `powershell`, `wt`) without touching clipboard.
   - **UI Automation (Fallback 2)**: `ValuePattern.SetValue` for accessible controls.
-- 🎨 **Modern Dark Design System** — Glassmorphism floating overlay with real-time audio visualizer pulse ring + dark settings UI.
 - 🔒 **Zero-Trust Local Privacy**:
-  - ❌ No cloud APIs or telemetry
+  - ❌ No cloud APIs, no telemetry, no analytics
   - ❌ Audio is never saved to disk
   - ❌ Clipboard contents are never logged
-  - ✅ Transcript history is **opt-in** (disabled by default)
+  - ✅ Transcript history is **opt-in** (disabled by default) and stored 100% locally.
 
 ---
 
-## 📸 Overview
+## 📸 Pipeline Overview
 
 ```
  ┌─────────────────────────────────────────────────────────┐
@@ -51,10 +59,20 @@
  ┌─────────────────────────────────────────────────────────┐
  │   VAD Silence Trimming → Multi-Threaded Whisper.net     │
  └────────────────────────────┬────────────────────────────┘
-                              │ <25ms
+                              │ Transcribed Text
+                              ▼
+ ┌─────────────────────────────────────────────────────────┐
+ │  (Optional) LLamaSharp GGUF Local LLM Text Polish       │
+ └────────────────────────────┬────────────────────────────┘
+                              │ Final Text
                               ▼
  ┌─────────────────────────────────────────────────────────┐
  │  Inject Text into Active App (Clipboard / SendInput)    │
+ └────────────────────────────┬────────────────────────────┘
+                              │ (Opt-in)
+                              ▼
+ ┌─────────────────────────────────────────────────────────┐
+ │   Save Transcript Record to SQLite (%LOCALAPPDATA%)     │
  └─────────────────────────────────────────────────────────┘
 ```
 
@@ -89,11 +107,11 @@ dotnet run --project src/Vacanam.App --configuration Release
 Right-click the **Vacanam** tray icon and click **Settings**:
 
 - **Speech Tab**:
-  - **Live Model Badges**: Instantly see which models are `ACTIVE & READY`, `DOWNLOADED`, or `NOT DOWNLOADED`.
-  - **One-Click Download**: Download any Whisper model (`Tiny ~75MB`, `Small ~466MB`, `Medium ~1.5GB`, `Large-v3 ~3.1GB`) directly from Settings with live progress tracking.
-  - **One-Click Select**: Switch active Whisper models instantly.
+  - **User-Centric Profiles**: Select from `Ultra Fast`, `Balanced`, `High Precision`, or `Maximum Accuracy`.
+  - **Live Model Badges**: See which models are `ACTIVE & READY`, `DOWNLOADED`, or `NOT DOWNLOADED`.
+  - **One-Click Download & Select**: Download models directly from Settings with live progress tracking.
 - **Audio Tab**: Live **Microphone Volume Slider (0 - 100%)**, **Mute Microphone Toggle**, and Voice Activity Detection (VAD) threshold settings.
-- **AI Tab**: Customizable **System Prompt / Grammar Polish Rules**, **Reset to Default** button, and sub-400MB local LLM model selection & downloads (featuring Qwen 2.5 0.5B & Llama 3.2 1B).
+- **AI Tab**: Enable/disable AI text polish, customize **System Prompt / Grammar Rules**, and manage local GGUF models (`Qwen 2.5 0.5B` & `Llama 3.2 1B`).
 - **History Tab**: **Local SQLite Transcript Search**, instant real-time filtering, target application badges, one-click **Copy**, single-record deletion, and **Clear All History**.
 - **General Tab**: Startup & notification options.
 - **Privacy Tab**: Local-first guarantees & opt-in transcript history toggles.
@@ -102,7 +120,7 @@ Right-click the **Vacanam** tray icon and click **Settings**:
 
 ## 📁 Solution Architecture
 
-Vacanam is built with a strictly decoupled modular architecture:
+Vacanam is built with a strictly decoupled modular architecture across 8 projects:
 
 ```
 Vacanam.slnx
@@ -113,23 +131,26 @@ Vacanam.slnx
 │   ├── Vacanam.Speech/         Whisper.net speech recognition & automatic model downloader
 │   ├── Vacanam.LLM/            LLamaSharp v0.27.0 CPU local LLM text refinement engine
 │   ├── Vacanam.Input/          Text injection strategies (Clipboard backup/restore, SendInput, UIA)
-│   ├── Vacanam.Infrastructure/ Settings persistence (JSON) & generic host DI registration
-│   └── Vacanam.App/            WPF UI (Tray, Floating Overlay, Settings Window, ViewModels)
+│   ├── Vacanam.Infrastructure/ Settings persistence (JSON), SQLite history, DI registration
+│   └── Vacanam.App/            WPF UI (Tray, Floating Overlay, Launch Banner, Settings Window)
 ```
 
 ---
 
 ## 📂 Local Model & Storage Paths
 
-Models and operational logs are stored in your local application data directory:
+Models, settings, databases, and operational logs are stored in your local application data directory:
 
 ```
 %LOCALAPPDATA%\Vacanam\
 ├── Models\
 │   ├── Whisper\
-│   │   ├── ggml-tiny.bin
-│   │   └── ggml-small.bin (Default)
+│   │   ├── ggml-tiny.bin (Ultra Fast ~75 MB)
+│   │   └── ggml-small.bin (Balanced ~466 MB, Recommended)
 │   └── LLM\
+│       ├── Qwen2.5-0.5B-Instruct-Q4_K_M.gguf (~398 MB)
+│       └── Llama-3.2-1B-Instruct-Q4_K_M.gguf (~808 MB)
+├── history.db (SQLite database - opt-in history)
 ├── Logs\
 │   └── vacanam-YYYYMMDD.log
 └── settings.json
