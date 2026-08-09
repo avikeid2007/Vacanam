@@ -93,6 +93,7 @@ Right-click the **Vacanam** tray icon and click **Settings**:
   - **One-Click Download**: Download any Whisper model (`Tiny ~75MB`, `Small ~466MB`, `Medium ~1.5GB`, `Large-v3 ~3.1GB`) directly from Settings with live progress tracking.
   - **One-Click Select**: Switch active Whisper models instantly.
 - **Audio Tab**: Live **Microphone Volume Slider (0 - 100%)**, **Mute Microphone Toggle**, and Voice Activity Detection (VAD) threshold settings.
+- **AI Tab**: Customizable **System Prompt / Grammar Polish Rules**, **Reset to Default** button, and sub-400MB local LLM model selection & downloads (featuring 76.7 MB Gemma 4 E2B Assistant).
 - **General Tab**: Startup & notification options.
 - **Privacy Tab**: Local-first guarantees & optional transcript history controls.
 
@@ -109,6 +110,7 @@ Vacanam.slnx
 │   ├── Vacanam.Windows/        Win32 P/Invoke (RegisterHotKey, GetForegroundWindow, SendInput)
 │   ├── Vacanam.Audio/          WASAPI audio capture, pure C# AudioConverter, VAD
 │   ├── Vacanam.Speech/         Whisper.net speech recognition & automatic model downloader
+│   ├── Vacanam.LLM/            LLamaSharp v0.27.0 CPU local LLM text refinement engine
 │   ├── Vacanam.Input/          Text injection strategies (Clipboard backup/restore, SendInput, UIA)
 │   ├── Vacanam.Infrastructure/ Settings persistence (JSON) & generic host DI registration
 │   └── Vacanam.App/            WPF UI (Tray, Floating Overlay, Settings Window, ViewModels)

@@ -328,10 +328,46 @@
 
                         <CheckBox Style="{StaticResource VacanamCheckBoxStyle}"
                                   IsChecked="{Binding AiEnabled}"
-                                  Content="Enable AI text enhancement (requires model download)"
-                                  Margin="0,0,0,20"/>
+                                  IsEnabled="{Binding CanEnableAi}"
+                                  Content="Enable AI text enhancement"
+                                  Margin="0,0,0,6"/>
 
-                        <TextBlock Style="{StaticResource BodyStyle}" Text="LLM Model" Margin="0,0,0,12"/>
+                        <TextBlock Style="{StaticResource CaptionStyle}"
+                                   Text="{Binding AiStatusCaption}"
+                                   Margin="0,0,0,20"/>
+
+                        <Separator Style="{StaticResource SectionSeparatorStyle}"/>
+
+                        <Grid Margin="0,0,0,8">
+                            <TextBlock Style="{StaticResource SubheadingStyle}" Text="System Prompt / Grammar Polish Rules" VerticalAlignment="Center"/>
+                            <Button Content="Reset to Default"
+                                    Command="{Binding ResetSystemPromptCommand}"
+                                    Style="{StaticResource GhostButtonStyle}"
+                                    HorizontalAlignment="Right"
+                                    Padding="10,4"
+                                    FontSize="11"/>
+                        </Grid>
+
+                        <TextBox Text="{Binding SystemPrompt, UpdateSourceTrigger=PropertyChanged}"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 MinHeight="90"
+                                 MaxHeight="160"
+                                 Background="#1A1A24"
+                                 Foreground="#F1F1F8"
+                                 BorderBrush="#2A2A3D"
+                                 BorderThickness="1"
+                                 Padding="12,10"
+                                 FontFamily="Consolas, monospace"
+                                 FontSize="12"
+                                 Margin="0,0,0,6"/>
+                        <TextBlock Style="{StaticResource CaptionStyle}"
+                                   Text="Customize instructions for the local LLM text refinement engine."
+                                   Margin="0,0,0,20"/>
+
+                        <Separator Style="{StaticResource SectionSeparatorStyle}"/>
+
+                        <TextBlock Style="{StaticResource BodyStyle}" Text="Sub-400MB Local LLM Models (LLamaSharp CPU)" Margin="0,0,0,12"/>
 
                         <!-- LLM model cards -->
                         <ItemsControl ItemsSource="{Binding LlmModels}">
@@ -377,21 +413,25 @@
                                                            FontSize="11"/>
                                             </StackPanel>
 
-                                            <Button Grid.Column="2"
-                                                    Content="Download"
-                                                    Style="{StaticResource GhostButtonStyle}"
-                                                    IsEnabled="False"
-                                                    VerticalAlignment="Center"
-                                                    Padding="12,6"/>
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Content="Select"
+                                                        Style="{StaticResource PrimaryButtonStyle}"
+                                                        Padding="12,6"
+                                                        Margin="0,0,6,0"
+                                                        Command="{Binding DataContext.SelectLlmModelCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding FileName}"/>
+
+                                                <Button Content="Download"
+                                                        Style="{StaticResource GhostButtonStyle}"
+                                                        Padding="12,6"
+                                                        Command="{Binding DataContext.DownloadLlmModelCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding FileName}"/>
+                                            </StackPanel>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-
-                        <TextBlock Style="{StaticResource CaptionStyle}"
-                                   Text="Model download functionality coming in Phase 6."
-                                   Margin="0,8,0,0"/>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>

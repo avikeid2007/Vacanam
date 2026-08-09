@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using System.IO;
@@ -11,6 +11,7 @@ using Vacanam.Core.Models;
 using Vacanam.Infrastructure.Configuration;
 using Vacanam.Infrastructure.DependencyInjection;
 using Vacanam.Input.DependencyInjection;
+using Vacanam.LLM.DependencyInjection;
 using Vacanam.Speech.DependencyInjection;
 using Vacanam.Windows.DependencyInjection;
 
@@ -70,6 +71,9 @@ public partial class App : Application
 
                     // Phase 5: replace text injector stub with CompositeTextInjector
                     services.AddVacanamInputServices();
+
+                    // Phase 6: register LLamaSharp Local LLM services
+                    services.AddLocalLlmServices();
 
                     // Register typed settings options
                     services.AddOptions<AppSettings>()

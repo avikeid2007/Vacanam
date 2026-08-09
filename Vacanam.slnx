@@ -5,6 +5,7 @@
     <Project Path="src/Vacanam.Core/Vacanam.Core.csproj" />
     <Project Path="src/Vacanam.Infrastructure/Vacanam.Infrastructure.csproj" />
     <Project Path="src/Vacanam.Input/Vacanam.Input.csproj" />
+    <Project Path="src/Vacanam.LLM/Vacanam.LLM.csproj" />
     <Project Path="src/Vacanam.Speech/Vacanam.Speech.csproj" />
     <Project Path="src/Vacanam.Windows/Vacanam.Windows.csproj" />
   </Folder>

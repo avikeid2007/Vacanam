@@ -1,6 +1,7 @@
 using Hardcodet.Wpf.TaskbarNotification;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
@@ -26,7 +27,9 @@ public sealed class ApplicationLifetimeService(
     IForegroundWindowService foregroundWindowService,
     IAudioRecorder audioRecorder,
     ISpeechRecognizer speechRecognizer,
+    ITextProcessor textProcessor,
     ITextInjector textInjector,
+    IOptions<AppSettings> settings,
     MainViewModel mainViewModel,
     SettingsViewModel settingsViewModel,
     RecordingOverlayViewModel overlayViewModel,
@@ -248,6 +251,30 @@ public sealed class ApplicationLifetimeService(
                 }
                 else
                 {
+                    // Check if AI text refinement is enabled
+                    bool isAiEnabled = settings.Value.Ai.Enabled;
+                    if (isAiEnabled)
+                    {
+                        try
+                        {
+                            logger.LogInformation("AI text enhancement enabled. Processing transcript with LLM model '{Model}'...", settings.Value.Ai.ModelFile);
+                            TransitionTo(VacanamState.Processing);
+                            overlayViewModel.State = VacanamState.Processing;
+                            overlayViewModel.StatusLabel = "AI mode…";
+
+                            string refined = await textProcessor.ProcessAsync(transcript, _currentSessionContext);
+                            if (!string.IsNullOrWhiteSpace(refined))
+                            {
+                                logger.LogInformation(">>> REFINED TRANSCRIPT: '{Refined}' <<<", refined);
+                                transcript = refined;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogWarning(ex, "AI text enhancement failed. Falling back to raw transcript.");
+                        }
+                    }
+
                     overlayViewModel.StatusLabel = transcript;
 
                     // Text Injection into target window
@@ -331,6 +358,7 @@ public sealed class ApplicationLifetimeService(
 
         audioRecorder.Dispose();
         speechRecognizer.Dispose();
+        textProcessor.Dispose();
 
         _trayIcon?.Dispose();
         _trayIcon = null;

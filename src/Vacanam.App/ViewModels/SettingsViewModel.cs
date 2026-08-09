@@ -17,6 +17,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly SettingsManager _settingsManager;
     private readonly IModelManager _modelManager;
     private readonly IAudioRecorder _audioRecorder;
+    private readonly Vacanam.LLM.Model.LlmModelManager _llmModelManager;
     private readonly ILogger<SettingsViewModel> _logger;
     private AppSettings _originalSettings = new();
 
@@ -24,11 +25,13 @@ public sealed partial class SettingsViewModel : ObservableObject
         SettingsManager settingsManager,
         IModelManager modelManager,
         IAudioRecorder audioRecorder,
+        Vacanam.LLM.Model.LlmModelManager llmModelManager,
         ILogger<SettingsViewModel> logger)
     {
         _settingsManager = settingsManager;
         _modelManager = modelManager;
         _audioRecorder = audioRecorder;
+        _llmModelManager = llmModelManager;
         _logger = logger;
 
         LoadFromSettings(_settingsManager.Load());
@@ -124,14 +127,54 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool _aiEnabled = false;
 
+    partial void OnAiEnabledChanged(bool value)
+    {
+        if (value && !CanEnableAi)
+        {
+            _aiEnabled = false;
+            OnPropertyChanged(nameof(AiEnabled));
+            StatusMessage = "Cannot enable AI text enhancement — selected model is not downloaded.";
+        }
+        else
+        {
+            HasChanges = true;
+        }
+    }
+
     [ObservableProperty]
-    private string _llmModelFile = string.Empty;
+    private bool _canEnableAi = false;
+
+    [ObservableProperty]
+    private string _aiStatusCaption = "⚠️ Download and select an LLM model below to enable AI text enhancement.";
+
+    [ObservableProperty]
+    private string _llmModelFile = "Qwen2.5-0.5B-Instruct-Q4_K_M.gguf";
+
+    partial void OnLlmModelFileChanged(string value)
+    {
+        RefreshModelStatuses();
+        HasChanges = true;
+    }
+
+    [ObservableProperty]
+    private string _systemPrompt = Vacanam.LLM.Prompts.SystemPrompts.DefaultGrammarFix;
+
+    partial void OnSystemPromptChanged(string value)
+    {
+        HasChanges = true;
+    }
+
+    [RelayCommand]
+    private void ResetSystemPrompt()
+    {
+        SystemPrompt = Vacanam.LLM.Prompts.SystemPrompts.DefaultGrammarFix;
+        StatusMessage = "System prompt reset to default rules.";
+    }
 
     public List<LlmModelItem> LlmModels { get; } =
     [
-        new("phi-3.5-mini-instruct-Q4_K_M.gguf",   "Phi-3.5 Mini",   "~2.2 GB", "2 GB+ VRAM",  "Microsoft — Fast, great grammar correction"),
-        new("llama-3.2-3b-Q4_K_M.gguf",             "Llama 3.2 3B",   "~1.8 GB", "2 GB+ VRAM",  "Meta — Balanced quality and speed"),
-        new("gemma-2-2b-it-Q4_K_M.gguf",            "Gemma 2 2B",     "~1.6 GB", "2 GB+ VRAM",  "Google — Compact and capable"),
+        new("Qwen2.5-0.5B-Instruct-Q4_K_M.gguf", "Qwen 2.5 0.5B Instruct", "~398 MB",  "< 600 MB RAM", "Alibaba — Top grammar accuracy for sub-400MB"),
+        new("Llama-3.2-1B-Instruct-Q4_K_M.gguf", "Llama 3.2 1B Instruct",  "~808 MB",  "< 1.2 GB RAM", "Meta — High precision grammar refinement"),
     ];
 
     [ObservableProperty]
@@ -198,6 +241,45 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
     }
 
+    [RelayCommand]
+    private void SelectLlmModel(string fileName)
+    {
+        LlmModelFile = fileName;
+        StatusMessage = $"Selected LLM model: {fileName}";
+    }
+
+    [RelayCommand]
+    private async Task DownloadLlmModelAsync(string fileName)
+    {
+        var item = LlmModels.FirstOrDefault(l => l.FileName == fileName);
+        if (item is null) return;
+
+        item.IsDownloading = true;
+        item.StatusText = "Downloading...";
+        StatusMessage = $"Downloading LLM {item.DisplayName} model...";
+
+        try
+        {
+            var progress = new Progress<double>(mb =>
+            {
+                item.StatusText = $"Downloading ({mb:F1} MB)...";
+            });
+
+            await _llmModelManager.EnsureLlmModelDownloadedAsync(fileName, progress);
+            StatusMessage = $"LLM {item.DisplayName} model downloaded successfully!";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to download LLM model {File}", fileName);
+            StatusMessage = $"Download failed for {item.DisplayName}. Check internet connection.";
+        }
+        finally
+        {
+            item.IsDownloading = false;
+            RefreshModelStatuses();
+        }
+    }
+
     public void RefreshModelStatuses()
     {
         foreach (var m in WhisperModels)
@@ -222,12 +304,27 @@ public sealed partial class SettingsViewModel : ObservableObject
 
         foreach (var l in LlmModels)
         {
-            bool exists = _modelManager.LlmModelExists(l.FileName);
+            bool exists = _llmModelManager.LlmModelExists(l.FileName);
             bool isActive = string.Equals(l.FileName, LlmModelFile, StringComparison.OrdinalIgnoreCase);
 
             l.IsDownloaded = exists;
             l.IsActive = isActive;
-            l.StatusText = exists ? (isActive ? "ACTIVE" : "DOWNLOADED") : "NOT DOWNLOADED";
+
+            if (l.IsDownloading) continue;
+
+            l.StatusText = exists ? (isActive ? "ACTIVE & READY" : "DOWNLOADED") : "NOT DOWNLOADED";
+        }
+
+        bool isSelectedDownloaded = !string.IsNullOrWhiteSpace(LlmModelFile) && _llmModelManager.LlmModelExists(LlmModelFile);
+        CanEnableAi = isSelectedDownloaded;
+        if (!CanEnableAi)
+        {
+            AiEnabled = false;
+            AiStatusCaption = "⚠️ Download and select an LLM model below to enable AI text enhancement.";
+        }
+        else
+        {
+            AiStatusCaption = "✓ Selected LLM model is downloaded and ready for AI enhancement.";
         }
     }
 
@@ -283,6 +380,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         WhisperLanguage = s.Speech.Language;
         AiEnabled = s.Ai.Enabled;
         LlmModelFile = s.Ai.ModelFile;
+        SystemPrompt = string.IsNullOrWhiteSpace(s.Ai.SystemPrompt) ? Vacanam.LLM.Prompts.SystemPrompts.DefaultGrammarFix : s.Ai.SystemPrompt;
         ConservativeMode = s.Ai.ConservativeMode;
         SaveHistory = s.Privacy.SaveHistory;
         MaxHistoryEntries = s.Privacy.MaxHistoryEntries;
@@ -295,7 +393,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         Hotkeys = new() { PushToTalk = PushToTalk, Modifiers = 2, VirtualKey = 0x20 },
         Audio = new() { EnableVad = EnableVad, VadThreshold = VadThreshold, PreferredDeviceId = SelectedDeviceId },
         Speech = new() { ModelSize = WhisperModelSize, Device = WhisperDevice, Language = WhisperLanguage },
-        Ai = new() { Enabled = AiEnabled, ModelFile = LlmModelFile, ConservativeMode = ConservativeMode },
+        Ai = new() { Enabled = AiEnabled, ModelFile = LlmModelFile, SystemPrompt = SystemPrompt, ConservativeMode = ConservativeMode },
         Privacy = new() { SaveHistory = SaveHistory, MaxHistoryEntries = MaxHistoryEntries }
     };
 
@@ -346,6 +444,9 @@ public sealed partial class LlmModelItem : ObservableObject
 
     [ObservableProperty]
     private bool _isActive;
+
+    [ObservableProperty]
+    private bool _isDownloading;
 
     [ObservableProperty]
     private string _statusText = "NOT DOWNLOADED";
