@@ -106,18 +106,6 @@ public partial class App : Application
                 })
                 .Build();
 
-            // Wire host stopping to WPF shutdown
-            _host.Services.GetRequiredService<IHostApplicationLifetime>()
-                .ApplicationStopped.Register(() =>
-                {
-                    Dispatcher.Invoke(() =>
-                    {
-                        Log.Information("Host stopped — shutting down WPF application.");
-                        Log.CloseAndFlush();
-                        Shutdown();
-                    });
-                });
-
             await _host.StartAsync();
         }
         catch (Exception ex)

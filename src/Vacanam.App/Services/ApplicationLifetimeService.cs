@@ -154,9 +154,18 @@ public sealed class ApplicationLifetimeService(
         mainViewModel.IsHotkeyRegistered = registered;
 
         if (registered)
+        {
             logger.LogInformation("Global hotkey registered successfully (Ctrl+Space).");
+        }
         else
-            logger.LogWarning("Global hotkey registration failed. Check Settings → Hotkeys.");
+        {
+            logger.LogWarning("Global hotkey registration failed — Ctrl+Space is in use by another app.");
+            // Notify user via balloon tip — they can still use tray ▶ Start Dictation
+            _trayIcon?.ShowBalloonTip(
+                "Hotkey Conflict",
+                "Ctrl+Space is already used by another app. Use tray ▶ Start Dictation instead, or change the hotkey in Settings.",
+                Hardcodet.Wpf.TaskbarNotification.BalloonIcon.Warning);
+        }
     }
 
     private void OnTranscriptSegmentReceived(object? sender, TranscriptSegmentEventArgs e)
@@ -387,7 +396,13 @@ public sealed class ApplicationLifetimeService(
     private void OnExitRequested(object? sender, EventArgs e)
     {
         logger.LogInformation("Exit requested — shutting down.");
+        // Stop the Generic Host first (triggers StopAsync + Cleanup)
         lifetime.StopApplication();
+        // Force WPF dispatcher shutdown so the process actually exits
+        Application.Current.Dispatcher.BeginInvoke(() =>
+        {
+            Application.Current.Shutdown();
+        });
     }
 
     private void Cleanup()
