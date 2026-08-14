@@ -9,6 +9,7 @@
 
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011%20x64-0078D4?style=flat-square&logo=windows)](https://microsoft.com)
 [![Framework](https://img.shields.io/badge/.NET-10.0-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com)
+[![Website](https://img.shields.io/badge/Website-avikeid2007.github.io%2FVacanam-6366F1?style=flat-square&logo=googlechrome&logoColor=white)](https://avikeid2007.github.io/Vacanam/)
 [![STT Engine](https://img.shields.io/badge/STT-Whisper.net%20v1.7.4-10B981?style=flat-square)](https://github.com/samm308/whisper.net)
 [![LLM Engine](https://img.shields.io/badge/LLM-LLamaSharp%20v0.27.0-837AF9?style=flat-square)](https://github.com/SciSharp/LLamaSharp)
 [![Database](https://img.shields.io/badge/Database-SQLite%20(WAL)-003B57?style=flat-square&logo=sqlite)](https://sqlite.org)

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vacanam — Production Local Voice Typing & AI Dictation for Windows</title>
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Vacanam is a free, 100% offline, local-first voice typing and AI text refinement application for Windows. Hold Ctrl+Space anywhere to dictate naturally.">
+  <meta name="keywords" content="voice typing, speech to text, whisper, whisper.net, local ai, windows dictation, push to talk, llama, local llm, offline speech recognition">
+  <meta name="author" content="avikeid2007">
+  
+  <!-- Open Graph / Social Media -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Vacanam — Production Local Voice Typing for Windows">
+  <meta property="og:description" content="Hold Ctrl+Space anywhere, speak naturally, and watch polished words appear instantly. 100% offline & private.">
+  <meta property="og:image" content="assets/hero-mockup.jpg">
+  <meta property="og:url" content="https://avikeid2007.github.io/Vacanam/">
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Vacanam — Local Voice Typing & AI Dictation">
+  <meta name="twitter:description" content="Sub-second local voice typing and grammar polish with Whisper.net & LLamaSharp. Zero cloud dependencies.">
+  <meta name="twitter:image" content="assets/hero-mockup.jpg">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Ambient Glow & Grid Background -->
+  <div class="bg-mesh"></div>
+  <div class="bg-grid"></div>
+
+  <!-- ── Header ───────────────────────────────────────────────────────────── -->
+  <header class="site-header">
+    <div class="container nav-container">
+      <a href="#" class="brand-logo">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="20" cy="20" r="18" fill="url(#brandGrad)" />
+          <path d="M20 10C17.79 10 16 11.79 16 14V21C16 23.21 17.79 25 20 25C22.21 25 24 23.21 24 21V14C24 11.79 22.21 10 20 10Z" fill="white"/>
+          <path d="M12 19C12 23.42 15.58 27 20 27C24.42 27 28 23.42 28 19H26C26 22.31 23.31 25 20 25C16.69 25 14 22.31 14 19H12Z" fill="white"/>
+          <path d="M19 28H21V32H19V28Z" fill="white"/>
+          <path d="M16 32H24V34H16V32Z" fill="white"/>
+          <defs>
+            <linearGradient id="brandGrad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#6366F1"/>
+              <stop offset="1" stop-color="#8B5CF6"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span>Vacanam <span class="gradient-text">🎙️</span></span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#playground">Try Demo</a></li>
+        <li><a href="#models">Models</a></li>
+        <li><a href="#languages">Languages</a></li>
+        <li><a href="#architecture">Architecture</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <a href="https://github.com/avikeid2007/Vacanam" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">
+          <svg height="18" width="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          <span>Star on GitHub</span>
+        </a>
+        <a href="https://github.com/avikeid2007/Vacanam/releases/latest" target="_blank" rel="noopener" class="btn btn-primary btn-sm">
+          <span>Download</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Hero Section ──────────────────────────────────────────────────────── -->
+  <section class="hero-section">
+    <div class="container">
+      <div class="hero-content">
+        <div class="badge pulse">
+          <span>100% Offline · Local-First Speech Engine</span>
+        </div>
+        
+        <h1 class="hero-title">
+          Speak Naturally. <br>
+          <span class="gradient-text">Polished Text Everywhere.</span>
+        </h1>
+        
+        <p class="hero-subtitle">
+          Production-quality voice typing and local AI text refinement for Windows 10 & 11.
+          Hold <kbd class="key-badge">Ctrl</kbd> + <kbd class="key-badge">Space</kbd> anywhere, speak your mind, and watch accurate text appear instantly in any application.
+        </p>
+
+        <div class="hero-cta">
+          <a href="https://github.com/avikeid2007/Vacanam/releases/latest" target="_blank" rel="noopener" class="btn btn-primary btn-lg btn-glow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>Download for Windows (x64)</span>
+          </a>
+          <a href="#playground" class="btn btn-secondary btn-lg">
+            <span>⚡ Try Interactive Demo</span>
+          </a>
+        </div>
+
+        <div class="hero-shortcut-hint">
+          <span>Global Shortcut:</span>
+          <kbd class="key-badge">Ctrl</kbd> + <kbd class="key-badge">Space</kbd>
+          <span style="color: var(--text-secondary);">Works in VS Code, Word, Chrome, Slack, Terminals & Notepad</span>
+        </div>
+      </div>
+
+      <!-- App Mockup Banner -->
+      <div class="hero-visual">
+        <img src="assets/hero-mockup.jpg" alt="Vacanam Windows 11 Voice Control Desktop Mockup" width="1200" height="675">
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Interactive Playground / Simulator ────────────────────────────────── -->
+  <section id="playground" class="playground-section">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge">Interactive Experience</div>
+        <h2 class="section-title">Experience Push-to-Talk Live</h2>
+        <p class="section-desc">Try the live simulator below right now in your browser. Hold down the button or press <kbd class="key-badge">Ctrl</kbd> + <kbd class="key-badge">Space</kbd> on your keyboard.</p>
+      </div>
+
+      <div class="simulator-container">
+        <div class="simulator-topbar">
+          <div class="target-app-selector">
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Target Application:</span>
+            <button class="app-chip active">VS Code</button>
+            <button class="app-chip">Slack</button>
+            <button class="app-chip">Outlook</button>
+            <button class="app-chip">Terminal</button>
+          </div>
+          <div class="badge" style="font-size: 0.8rem;">
+            <span>AI Text Polish Mode: <strong style="color: #10B981;">Active</strong></span>
+          </div>
+        </div>
+
+        <!-- Editor Target Mockup -->
+        <div class="editor-mockup">
+          <div class="editor-header">
+            <span id="targetAppTitle">VS Code — editor.ts</span>
+            <span>UTF-8 · Vacanam Target Window</span>
+          </div>
+          <div class="typing-text" id="typingOutput">
+            <span style="color: var(--text-muted);">// Hold Ctrl+Space or the button below to dictate into VS Code...</span>
+          </div>
+          <span class="cursor-blink"></span>
+        </div>
+
+        <!-- Simulated Audio Waveform -->
+        <canvas id="waveformCanvas" class="canvas-waveform"></canvas>
+
+        <!-- Push to talk button -->
+        <button id="pttBtn" class="ptt-interactive-btn">
+          <span>🎙️</span>
+          <span>Hold <kbd class="key-badge">Ctrl</kbd> + <kbd class="key-badge">Space</kbd> or <strong>Hold to Dictate</strong></span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Features Section ─────────────────────────────────────────────────── -->
+  <section id="features" class="features-section">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge">Built for Performance</div>
+        <h2 class="section-title">Why Developers & Writers Love Vacanam</h2>
+        <p class="section-desc">Engineered with high performance C# / .NET 10, low-latency WASAPI capture, and local AI.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🎙️</div>
+          <h3 class="feature-title">Global Push-to-Talk</h3>
+          <p class="feature-desc">Hold <kbd class="key-badge">Ctrl+Space</kbd> from any application. Release to inject speech directly at your cursor without switching windows.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3 class="feature-title">Whisper.net Local STT</h3>
+          <p class="feature-desc">Sub-300ms transcription speed powered by whisper.cpp with pure C# audio resampling and multi-threaded CPU/GPU inference.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🤖</div>
+          <h3 class="feature-title">Local LLM Text Polish</h3>
+          <p class="feature-desc">Optional sub-second grammar refinement with local GGUF models (Qwen 2.5 / Llama 3.2) to fix punctuation and eliminate filler words.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🌍</div>
+          <h3 class="feature-title">99+ Languages Supported</h3>
+          <p class="feature-desc">Seamless transcription across English, Hindi, Spanish, German, French, Chinese, Japanese, and 90+ other global languages.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🔒</div>
+          <h3 class="feature-title">100% Zero-Trust Privacy</h3>
+          <p class="feature-desc">Zero cloud APIs, zero telemetry, and zero tracking. Audio is processed in memory and never saved to disk.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">📜</div>
+          <h3 class="feature-title">SQLite History & Search</h3>
+          <p class="feature-desc">Opt-in local SQLite database with instant full-text search, process tagging (Chrome, VS Code, Word), and one-click copy.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🔇</div>
+          <h3 class="feature-title">Microphone Health Alerts</h3>
+          <p class="feature-desc">Real-time detection for muted microphones or low volume levels (&lt;30%), warning you on the visual overlay instantly.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">🎯</div>
+          <h3 class="feature-title">Smart 3-Strategy Injection</h3>
+          <p class="feature-desc">Intelligent fallback across Clipboard + Paste, native Win32 SendInput for command terminals, and UIAutomation.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Model Matrix ─────────────────────────────────────────────────────── -->
+  <section id="models" class="models-section">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge">Model Options</div>
+        <h2 class="section-title">Whisper Speech Models</h2>
+        <p class="section-desc">Pick the optimal balance between inference speed and accuracy for your hardware.</p>
+      </div>
+
+      <div class="models-grid">
+        <div class="model-card">
+          <div class="model-header">
+            <h3 class="model-name">⚡ Ultra Fast</h3>
+            <span class="model-size-badge">tiny · ~75 MB</span>
+          </div>
+          <p class="feature-desc">Instant response time. Best for short commands and low-power laptops.</p>
+          <ul class="model-stats">
+            <li><span>Latency</span> <strong>&lt; 150 ms</strong></li>
+            <li><span>RAM Usage</span> <strong>~120 MB</strong></li>
+            <li><span>Accuracy</span> <strong>92%</strong></li>
+          </ul>
+        </div>
+
+        <div class="model-card recommended">
+          <div class="model-header">
+            <h3 class="model-name">⭐ Balanced</h3>
+            <span class="model-size-badge">small · ~466 MB</span>
+          </div>
+          <p class="feature-desc">Recommended for everyday dictation. Superb balance of speed and high accuracy.</p>
+          <ul class="model-stats">
+            <li><span>Latency</span> <strong>&lt; 280 ms</strong></li>
+            <li><span>RAM Usage</span> <strong>~650 MB</strong></li>
+            <li><span>Accuracy</span> <strong>97.5%</strong></li>
+          </ul>
+        </div>
+
+        <div class="model-card">
+          <div class="model-header">
+            <h3 class="model-name">🎯 High Precision</h3>
+            <span class="model-size-badge">medium · ~1.5 GB</span>
+          </div>
+          <p class="feature-desc">Exceptional accuracy for complex technical terminology and diverse accents.</p>
+          <ul class="model-stats">
+            <li><span>Latency</span> <strong>~650 ms</strong></li>
+            <li><span>RAM Usage</span> <strong>~2.1 GB</strong></li>
+            <li><span>Accuracy</span> <strong>99.1%</strong></li>
+          </ul>
+        </div>
+
+        <div class="model-card">
+          <div class="model-header">
+            <h3 class="model-name">👑 Maximum</h3>
+            <span class="model-size-badge">large-v3 · ~3.1 GB</span>
+          </div>
+          <p class="feature-desc">Maximum accuracy for multilingual speech, dialects, and noisy environments.</p>
+          <ul class="model-stats">
+            <li><span>Latency</span> <strong>~1.2 s</strong></li>
+            <li><span>RAM Usage</span> <strong>~4.2 GB</strong></li>
+            <li><span>Accuracy</span> <strong>99.8%</strong></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Supported Languages ──────────────────────────────────────────────── -->
+  <section id="languages" class="languages-section">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge" id="langCountBadge">99 Languages</div>
+        <h2 class="section-title">Multilingual Speech Support</h2>
+        <p class="section-desc">Vacanam natively supports all 99 official OpenAI Whisper languages plus Auto-Detection.</p>
+      </div>
+
+      <div class="lang-search-bar">
+        <span class="lang-search-icon">🔍</span>
+        <input type="text" id="langSearchInput" class="lang-search-input" placeholder="Search languages (e.g. Hindi, Spanish, Japanese, en)...">
+      </div>
+
+      <div id="languagesGrid" class="languages-grid">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Architecture Pipeline ────────────────────────────────────────────── -->
+  <section id="architecture" class="arch-section">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge">Decoupled Architecture</div>
+        <h2 class="section-title">How Vacanam Works</h2>
+        <p class="section-desc">A pipeline designed for ultra-low latency, zero data loss, and seamless text injection.</p>
+      </div>
+
+      <div class="pipeline-diagram">
+        <div class="pipeline-step">
+          <div class="step-num">1</div>
+          <div class="step-info">
+            <h4>Global Hotkey & Foreground App Detection</h4>
+            <p>Win32 <code>RegisterHotKey</code> captures <code>Ctrl+Space</code> and resolves the target application's <code>HWND</code> and process name (VS Code, Chrome, etc.).</p>
+          </div>
+        </div>
+
+        <div class="pipeline-step">
+          <div class="step-num">2</div>
+          <div class="step-info">
+            <h4>WASAPI Audio Capture & Conversion</h4>
+            <p>Low-overhead WASAPI audio streaming with pure managed C# 16kHz mono resampling without any native COM or MediaFoundation dependencies.</p>
+          </div>
+        </div>
+
+        <div class="pipeline-step">
+          <div class="step-num">3</div>
+          <div class="step-info">
+            <h4>VAD Silence Trimming & Whisper STT</h4>
+            <p>Energy-based Voice Activity Detection trims leading/trailing silence before executing multi-threaded Whisper.net inference.</p>
+          </div>
+        </div>
+
+        <div class="pipeline-step">
+          <div class="step-num">4</div>
+          <div class="step-info">
+            <h4>(Optional) Local LLM Text Polish</h4>
+            <p>LLamaSharp processes the raw transcript through local GGUF models (Qwen 2.5 / Llama 3.2) with your custom grammar rules.</p>
+          </div>
+        </div>
+
+        <div class="pipeline-step">
+          <div class="step-num">5</div>
+          <div class="step-info">
+            <h4>Smart Text Injection & SQLite History</h4>
+            <p>Injects final text directly at the cursor via Clipboard or SendInput, and saves an opt-in audit log to local SQLite.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FAQ Section ──────────────────────────────────────────────────────── -->
+  <section id="faq" class="faq-section">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge">Frequently Asked Questions</div>
+        <h2 class="section-title">Got Questions?</h2>
+        <p class="section-desc">Everything you need to know about Vacanam, privacy, and system requirements.</p>
+      </div>
+
+      <div class="faq-list">
+        <div class="faq-item active">
+          <div class="faq-question">Does Vacanam require an Internet connection?</div>
+          <div class="faq-answer">No. Once the initial speech model is downloaded, Vacanam runs 100% offline. All speech recognition and AI text refinement execute directly on your local CPU or GPU.</div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">Do I need a dedicated GPU (NVIDIA RTX)?</div>
+          <div class="faq-answer">No. Vacanam is heavily optimized for multi-threaded CPU inference. The Ultra Fast (tiny) and Balanced (small) models run smoothly on standard laptops with Intel/AMD processors. CUDA acceleration is available if you have an NVIDIA GPU.</div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">Why does Windows SmartScreen show a warning when installing?</div>
+          <div class="faq-answer">Vacanam is a free, open-source application built with GitHub Actions. Because it does not use an expensive commercial EV Code Signing certificate, Windows Defender SmartScreen displays a standard informational prompt. Click <strong>More info → Run anyway</strong> to install safely.</div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">Can I change the global hotkey?</div>
+          <div class="faq-answer">Yes! Open Vacanam Settings from the System Tray icon to configure your preferred shortcut and toggle Push-to-Talk vs Toggle recording modes.</div>
+        </div>
+
+        <div class="faq-item">
+          <div class="faq-question">Is my dictation history private?</div>
+          <div class="faq-answer">Yes, 100%. History recording is completely opt-in and disabled by default. When enabled, records are saved exclusively to a local SQLite database in your <code>%LOCALAPPDATA%\Vacanam\</code> folder.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Call to Action ───────────────────────────────────────────────────── -->
+  <section class="cta-section">
+    <div class="container">
+      <div class="cta-card">
+        <h2 class="cta-title">Ready for Frictionless Voice Typing?</h2>
+        <p class="cta-desc">Download the latest installer or build from source. Free, open-source, and private forever.</p>
+        <div class="hero-cta" style="margin-bottom: 0;">
+          <a href="https://github.com/avikeid2007/Vacanam/releases/latest" target="_blank" rel="noopener" class="btn btn-primary btn-lg btn-glow">
+            <span>Download Vacanam (.exe)</span>
+          </a>
+          <a href="https://github.com/avikeid2007/Vacanam" target="_blank" rel="noopener" class="btn btn-secondary btn-lg">
+            <span>Explore Source Code on GitHub</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ───────────────────────────────────────────────────────────── -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="brand-logo">
+            <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" width="28" height="28">
+              <circle cx="20" cy="20" r="18" fill="url(#brandGradFooter)" />
+              <path d="M20 10C17.79 10 16 11.79 16 14V21C16 23.21 17.79 25 20 25C22.21 25 24 23.21 24 21V14C24 11.79 22.21 10 20 10Z" fill="white"/>
+              <path d="M12 19C12 23.42 15.58 27 20 27C24.42 27 28 23.42 28 19H26C26 22.31 23.31 25 20 25C16.69 25 14 22.31 14 19H12Z" fill="white"/>
+              <path d="M19 28H21V32H19V28Z" fill="white"/>
+              <path d="M16 32H24V34H16V32Z" fill="white"/>
+              <defs>
+                <linearGradient id="brandGradFooter" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#6366F1"/>
+                  <stop offset="1" stop-color="#8B5CF6"/>
+                </linearGradient>
+              </defs>
+            </svg>
+            <span>Vacanam</span>
+          </div>
+          <p>Production-quality, local-first voice typing and AI text refinement for Windows 10 & 11.</p>
+        </div>
+
+        <div class="footer-col">
+          <h5>Navigation</h5>
+          <ul class="footer-links">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#playground">Interactive Demo</a></li>
+            <li><a href="#models">Speech Models</a></li>
+            <li><a href="#languages">Supported Languages</a></li>
+            <li><a href="#architecture">Architecture</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h5>Community & Code</h5>
+          <ul class="footer-links">
+            <li><a href="https://github.com/avikeid2007/Vacanam" target="_blank" rel="noopener">GitHub Repository</a></li>
+            <li><a href="https://github.com/avikeid2007/Vacanam/releases" target="_blank" rel="noopener">Releases & Changelog</a></li>
+            <li><a href="https://github.com/avikeid2007/Vacanam/issues" target="_blank" rel="noopener">Report an Issue</a></li>
+            <li><a href="https://github.com/avikeid2007/Vacanam/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>© 2026 Vacanam. Free and Open Source under MIT License.</span>
+        <span>Built with .NET 10, Whisper.net, and LLamaSharp.</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="app.js"></script>
+</body>
+</html>
