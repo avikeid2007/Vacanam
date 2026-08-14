@@ -17,6 +17,7 @@ public sealed class RecordingBuffer : IDisposable
     private readonly ConcurrentQueue<byte[]> _chunks = new();
     private readonly IAudioRecorder _recorder;
     private ChannelWriter<byte[]>? _channelWriter;
+    private int _totalBytes;
     private bool _capturing;
     private bool _disposed;
 
@@ -26,7 +27,7 @@ public sealed class RecordingBuffer : IDisposable
     }
 
     /// <summary>Total bytes of PCM data accumulated so far.</summary>
-    public int TotalBytes { get; private set; }
+    public int TotalBytes => Volatile.Read(ref _totalBytes);
 
     /// <summary>Duration of captured audio.</summary>
     public TimeSpan Duration =>
@@ -37,7 +38,7 @@ public sealed class RecordingBuffer : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
         _capturing = true;
         _channelWriter = channelWriter;
-        TotalBytes = 0;
+        Interlocked.Exchange(ref _totalBytes, 0);
         while (_chunks.TryDequeue(out _)) { }
         _recorder.DataAvailable += OnDataAvailable;
     }
@@ -140,7 +141,7 @@ public sealed class RecordingBuffer : IDisposable
         var copy = new byte[e.BytesRecorded];
         Buffer.BlockCopy(e.Buffer, 0, copy, 0, e.BytesRecorded);
         _chunks.Enqueue(copy);
-        TotalBytes += e.BytesRecorded;
+        Interlocked.Add(ref _totalBytes, e.BytesRecorded);
 
         _channelWriter?.TryWrite(copy);
     }

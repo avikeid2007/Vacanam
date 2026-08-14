@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Whisper.net;
@@ -99,17 +99,17 @@ public sealed class WhisperSpeechRecognizer : ISpeechRecognizer
             await LoadModelAsync(cancellationToken);
         }
 
-        _logger.LogInformation("Starting Whisper transcription on {Bytes} bytes audio stream.", audioStream.Length);
+        string language = _settings.Value.Speech.Language;
+        if (string.IsNullOrWhiteSpace(language))
+        {
+            language = "en"; // Default to English
+        }
+
+        _logger.LogInformation("Starting Whisper transcription (language: '{Language}') on {Bytes} bytes audio stream.", language, audioStream.Length);
         var sb = new StringBuilder();
 
         try
         {
-            string language = _settings.Value.Speech.Language;
-            if (string.IsNullOrWhiteSpace(language) || string.Equals(language, "auto", StringComparison.OrdinalIgnoreCase))
-            {
-                language = "en"; // Default to English for low-latency; bypass language detection pass
-            }
-
             // Calculate optimal CPU thread count for parallel inference
             int threads = Math.Max(2, Environment.ProcessorCount - 1);
 

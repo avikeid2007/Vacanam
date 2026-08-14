@@ -186,13 +186,8 @@ public sealed class LlmTextProcessor : ITextProcessor
         }
         finally
         {
-            _modelLockRelease();
+            _lock.Release();
         }
-    }
-
-    private void _modelLockRelease()
-    {
-        _lock.Release();
     }
 
     public void Dispose()

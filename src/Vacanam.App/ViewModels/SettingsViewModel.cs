@@ -3,6 +3,8 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Vacanam.Core.Constants;
 using Vacanam.Core.Enums;
 using Vacanam.Core.Interfaces;
 using Vacanam.Core.Models;
@@ -17,6 +19,7 @@ namespace Vacanam.App.ViewModels;
 public sealed partial class SettingsViewModel : ObservableObject
 {
     private readonly SettingsManager _settingsManager;
+    private readonly IOptions<AppSettings> _options;
     private readonly IModelManager _modelManager;
     private readonly IAudioRecorder _audioRecorder;
     private readonly Vacanam.LLM.Model.LlmModelManager _llmModelManager;
@@ -27,6 +30,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public SettingsViewModel(
         SettingsManager settingsManager,
+        IOptions<AppSettings> options,
         IModelManager modelManager,
         IAudioRecorder audioRecorder,
         Vacanam.LLM.Model.LlmModelManager llmModelManager,
@@ -35,6 +39,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         ILogger<SettingsViewModel> logger)
     {
         _settingsManager = settingsManager;
+        _options = options;
         _modelManager = modelManager;
         _audioRecorder = audioRecorder;
         _llmModelManager = llmModelManager;
@@ -129,7 +134,32 @@ public sealed partial class SettingsViewModel : ObservableObject
     public IReadOnlyList<string> WhisperDevices { get; } = ["Auto", "CPU", "CUDA"];
 
     [ObservableProperty]
-    private string _whisperLanguage = "auto";
+    private string _whisperLanguage = "en";
+
+    [ObservableProperty]
+    private WhisperLanguage? _selectedLanguage;
+
+    partial void OnWhisperLanguageChanged(string value)
+    {
+        if (_selectedLanguage?.Code != value)
+        {
+            _selectedLanguage = AvailableLanguages.FirstOrDefault(l => string.Equals(l.Code, value, StringComparison.OrdinalIgnoreCase)) ?? AvailableLanguages[0];
+            OnPropertyChanged(nameof(SelectedLanguage));
+        }
+        HasChanges = true;
+    }
+
+    partial void OnSelectedLanguageChanged(WhisperLanguage? value)
+    {
+        if (value is not null && _whisperLanguage != value.Code)
+        {
+            _whisperLanguage = value.Code;
+            OnPropertyChanged(nameof(WhisperLanguage));
+            HasChanges = true;
+        }
+    }
+
+    public IReadOnlyList<WhisperLanguage> AvailableLanguages { get; } = WhisperLanguages.All;
 
     // ── AI Tab ────────────────────────────────────────────────────────────────
 
@@ -430,11 +460,21 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         var settings = BuildSettings();
         _settingsManager.Save(settings);
+
+        // Update in-memory options instance immediately so running services reflect changes without restart
+        _options.Value.General = settings.General;
+        _options.Value.Hotkeys = settings.Hotkeys;
+        _options.Value.Audio = settings.Audio;
+        _options.Value.Speech = settings.Speech;
+        _options.Value.Ai = settings.Ai;
+        _options.Value.Privacy = settings.Privacy;
+
         _autoStartService.SetAutoStart(settings.General.StartWithWindows);
         _originalSettings = settings;
         HasChanges = false;
         StatusMessage = "Settings saved.";
-        _logger.LogInformation("Settings saved by user. StartWithWindows: {Value}", settings.General.StartWithWindows);
+        _logger.LogInformation("Settings saved by user. Language: '{Lang}', Model: '{Model}', StartWithWindows: {Value}",
+            settings.Speech.Language, settings.Speech.ModelSize, settings.General.StartWithWindows);
         SaveCompleted?.Invoke(this, EventArgs.Empty);
     }
 
@@ -496,7 +536,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
         WhisperModelSize = s.Speech.ModelSize;
         WhisperDevice = s.Speech.Device;
-        WhisperLanguage = s.Speech.Language;
+        WhisperLanguage = string.IsNullOrWhiteSpace(s.Speech.Language) ? "en" : s.Speech.Language;
+        SelectedLanguage = AvailableLanguages.FirstOrDefault(l => string.Equals(l.Code, WhisperLanguage, StringComparison.OrdinalIgnoreCase)) ?? AvailableLanguages[0];
         AiEnabled = s.Ai.Enabled;
         LlmModelFile = s.Ai.ModelFile;
         SystemPrompt = string.IsNullOrWhiteSpace(s.Ai.SystemPrompt) ? Vacanam.LLM.Prompts.SystemPrompts.DefaultGrammarFix : s.Ai.SystemPrompt;
@@ -515,6 +556,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         Ai = new() { Enabled = AiEnabled, ModelFile = LlmModelFile, SystemPrompt = SystemPrompt, ConservativeMode = ConservativeMode },
         Privacy = new() { SaveHistory = SaveHistory, MaxHistoryEntries = MaxHistoryEntries }
     };
+
+    public void Reload()
+    {
+        LoadFromSettings(_settingsManager.Load());
+        RefreshModelStatuses();
+        _ = RefreshHistoryAsync();
+        HasChanges = false;
+    }
 
     public event EventHandler? SaveCompleted;
     public event EventHandler? CancelRequested;
