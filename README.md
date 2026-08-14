@@ -2,7 +2,9 @@
 
 <div align="center">
 
-![Vacanam Banner](https://img.shields.io/badge/Vacanam-Local%20Voice%20Typing-6366F1?style=for-the-badge&logo=windows&logoColor=white)
+![Vacanam Banner](https://img.shields.io/badge/Vacanam-Voice%20In.%20Words%20Out.-6366F1?style=for-the-badge&logo=windows&logoColor=white)
+
+### *Voice In. Words Out.*
 
 **Production-quality, local-first voice typing and AI text refinement for Windows.**  
 *Hold `Ctrl+Space` anywhere, speak naturally, and watch your polished words appear instantly.*
@@ -41,6 +43,7 @@
   - ❌ Audio is never saved to disk
   - ❌ Clipboard contents are never logged
   - ✅ Transcript history is **opt-in** (disabled by default) and stored 100% locally.
+  - 📜 Read our full [Privacy Policy](file:///d:/Vacanam/PRIVACY.md) or online at [avikeid2007.github.io/Vacanam/privacy.html](https://avikeid2007.github.io/Vacanam/privacy.html).
 
 ---
 
@@ -87,11 +90,7 @@
 3. Vacanam will launch automatically in your System Tray — hold `Ctrl+Space` anywhere to dictate.
 
 > [!NOTE]
-> **Windows SmartScreen Note**:  
-> Because Vacanam is a free open-source desktop application compiled on GitHub Actions, Windows Defender SmartScreen may display a blue *"Windows protected your PC"* popup during installation:
-> 1. Click **More info** on the popup.
-> 2. Click **Run anyway** to proceed with installation.
-> *(As community downloads increase, Microsoft SmartScreen automatically builds reputation for future releases).*
+> **Code Signing**: Free code signing provided by [SignPath.io](https://signpath.io), certificate by [SignPath Foundation](https://signpath.org).
 
 ### Prerequisites for Building from Source
 - **Windows 10 / 11** (x64)
