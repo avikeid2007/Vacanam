@@ -306,6 +306,19 @@
 
                         <Separator Style="{StaticResource SectionSeparatorStyle}"/>
 
+                        <TextBlock Style="{StaticResource BodyStyle}" Text="Recognition Language" Margin="0,0,0,8"/>
+                        <ComboBox Style="{StaticResource VacanamComboBoxStyle}"
+                                  ItemsSource="{Binding AvailableLanguages}"
+                                  SelectedItem="{Binding SelectedLanguage}"
+                                  DisplayMemberPath="DisplayName"
+                                  Width="280"
+                                  HorizontalAlignment="Left"/>
+                        <TextBlock Style="{StaticResource CaptionStyle}"
+                                   Text="Select spoken language for transcription (Default: English). Auto-Detect dynamically identifies language."
+                                   Margin="0,6,0,0" TextWrapping="Wrap"/>
+
+                        <Separator Style="{StaticResource SectionSeparatorStyle}"/>
+
                         <TextBlock Style="{StaticResource BodyStyle}" Text="Inference Device" Margin="0,0,0,8"/>
                         <ComboBox Style="{StaticResource VacanamComboBoxStyle}"
                                   ItemsSource="{Binding WhisperDevices}"

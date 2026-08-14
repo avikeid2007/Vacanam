@@ -40,7 +40,7 @@ public sealed class SpeechSettings
 {
     public string ModelSize { get; set; } = "small";
     public string Device { get; set; } = "Auto";
-    public string Language { get; set; } = "auto";
+    public string Language { get; set; } = "en";
 }
 
 public sealed class AiSettings

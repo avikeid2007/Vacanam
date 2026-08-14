@@ -390,6 +390,7 @@ public sealed class ApplicationLifetimeService(
     {
         Application.Current.Dispatcher.Invoke(() =>
         {
+            settingsViewModel.Reload();
             var settingsWindow = new SettingsWindow(settingsViewModel);
             settingsWindow.Show();
             settingsWindow.Activate();
