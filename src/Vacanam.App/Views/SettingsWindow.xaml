@@ -119,7 +119,7 @@
                         <Separator Style="{StaticResource SectionSeparatorStyle}"/>
 
                         <TextBlock Style="{StaticResource SubheadingStyle}" Text="Diagnostics &amp; Logs" Margin="0,0,0,8"/>
-                        <Button Style="{StaticResource VacanamSecondaryButtonStyle}"
+                        <Button Style="{StaticResource GhostButtonStyle}"
                                 Content="📁  Open Log Folder"
                                 Command="{Binding OpenLogFolderCommand}"
                                 Width="180"

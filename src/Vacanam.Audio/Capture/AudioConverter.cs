@@ -1,4 +1,4 @@
-﻿namespace Vacanam.Audio.Capture;
+namespace Vacanam.Audio.Capture;
 
 /// <summary>
 /// High-performance, pure C# audio converter and resampler.
@@ -18,7 +18,7 @@ internal static class AudioConverter
 
         int channels = Math.Max(1, inputFormat.Channels);
         int inSampleRate = inputFormat.SampleRate;
-        bool isFloat = inputFormat.Encoding == NAudio.Wave.WaveFormatEncoding.IeeeFloat || inputFormat.BitsPerSample == 32;
+        bool isFloat = inputFormat.Encoding == NAudio.Wave.WaveFormatEncoding.IeeeFloat;
 
         int bytesPerSample = isFloat ? 4 : 2;
         int totalNativeSamples = bytesRecorded / bytesPerSample;

@@ -196,11 +196,11 @@ public sealed class WasapiAudioRecorder : IAudioRecorder
         try
         {
             using var enumerator = new MMDeviceEnumerator();
-            var defaultDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Console);
+            using var defaultDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Console);
 
             foreach (var device in enumerator.EnumerateAudioEndPoints(DataFlow.Capture, DeviceState.Active))
             {
-                bool isDefault = device.ID == defaultDevice.ID;
+                bool isDefault = defaultDevice != null && device.ID == defaultDevice.ID;
                 devices.Add(new AudioDevice(
                     Id: device.ID,
                     Name: device.FriendlyName,
@@ -343,7 +343,11 @@ public sealed class WasapiAudioRecorder : IAudioRecorder
         if (_disposed) return;
         _disposed = true;
         if (_isRecording)
-            StopAsync().GetAwaiter().GetResult();
+        {
+            _isRecording = false;
+            _audioLevel = 0f;
+            _capture?.StopRecording();
+        }
         CleanupCapture();
         _logger.LogDebug("WasapiAudioRecorder disposed.");
     }

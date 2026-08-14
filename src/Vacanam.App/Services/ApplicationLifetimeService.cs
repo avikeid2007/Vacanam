@@ -181,9 +181,9 @@ public sealed class ApplicationLifetimeService(
 
     // ── Hotkey Handlers ───────────────────────────────────────────────────────
 
-    private void OnHotkeyPressed(object? sender, EventArgs e)
+    private async void OnHotkeyPressed(object? sender, EventArgs e)
     {
-        Application.Current.Dispatcher.Invoke(async () =>
+        await Application.Current.Dispatcher.InvokeAsync(async () =>
         {
             if (mainViewModel.CurrentState is not VacanamState.Idle)
             {
@@ -216,12 +216,12 @@ public sealed class ApplicationLifetimeService(
                 await Task.Delay(1000);
                 TransitionTo(VacanamState.Idle);
             }
-        });
+        }).Task.Unwrap();
     }
 
-    private void OnHotkeyReleased(object? sender, EventArgs e)
+    private async void OnHotkeyReleased(object? sender, EventArgs e)
     {
-        Application.Current.Dispatcher.Invoke(async () =>
+        await Application.Current.Dispatcher.InvokeAsync(async () =>
         {
             if (mainViewModel.CurrentState is not VacanamState.Recording)
             {
@@ -285,8 +285,10 @@ public sealed class ApplicationLifetimeService(
                 }
                 else
                 {
-                    // Check if AI text refinement is enabled
+                    string rawTranscript = transcript;
+                    bool wasActuallyEnhanced = false;
                     bool isAiEnabled = settings.Value.Ai.Enabled;
+
                     if (isAiEnabled)
                     {
                         try
@@ -301,6 +303,7 @@ public sealed class ApplicationLifetimeService(
                             {
                                 logger.LogInformation(">>> REFINED TRANSCRIPT: '{Refined}' <<<", refined);
                                 transcript = refined;
+                                wasActuallyEnhanced = true;
                             }
                         }
                         catch (Exception ex)
@@ -324,11 +327,11 @@ public sealed class ApplicationLifetimeService(
                             var record = new TranscriptRecord(
                                 Id: 0,
                                 TimestampUtc: DateTime.UtcNow,
-                                RawTranscript: transcript,
+                                RawTranscript: rawTranscript,
                                 FinalText: transcript,
                                 TargetApp: string.IsNullOrWhiteSpace(_currentSessionContext.ProcessName) ? "Unknown" : _currentSessionContext.ProcessName,
                                 DurationSeconds: duration.TotalSeconds,
-                                WasAiEnhanced: isAiEnabled
+                                WasAiEnhanced: wasActuallyEnhanced
                             );
                             await historyRepository.AddAsync(record);
                         }
@@ -362,7 +365,7 @@ public sealed class ApplicationLifetimeService(
                 _recordingBuffer?.Dispose();
                 _recordingBuffer = null;
             }
-        });
+        }).Task.Unwrap();
     }
 
     private static string CleanTranscript(string raw)
