@@ -40,18 +40,36 @@ public static class Win32Interop
     [DllImport("user32.dll", SetLastError = true)]
     public static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
 
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool LockWorkStation();
+
     // -- Message constants -----------------------------------------------------
 
     public const int WM_HOTKEY = 0x0312;
 
     // -- Virtual key codes -----------------------------------------------------
 
+    public const ushort VK_BACK = 0x08;
+    public const ushort VK_TAB = 0x09;
+    public const ushort VK_RETURN = 0x0D;
+    public const ushort VK_SHIFT = 0x10;
     public const ushort VK_CONTROL = 0x11;
-    public const ushort VK_V = 0x56;
+    public const ushort VK_MENU = 0x12; // Alt
+    public const ushort VK_ESCAPE = 0x1B;
     public const uint VK_SPACE = 0x20;
-    public const uint VK_RETURN = 0x0D;
-    public const uint VK_ESCAPE = 0x1B;
-    public const uint VK_TAB = 0x09;
+    public const ushort VK_END = 0x23;
+    public const ushort VK_HOME = 0x24;
+    public const ushort VK_DELETE = 0x2E;
+
+    public const ushort VK_A = 0x41;
+    public const ushort VK_C = 0x43;
+    public const ushort VK_S = 0x53;
+    public const ushort VK_V = 0x56;
+    public const ushort VK_X = 0x58;
+    public const ushort VK_Y = 0x59;
+    public const ushort VK_Z = 0x5A;
+    public const ushort VK_F4 = 0x73;
 
     // -- Error codes -----------------------------------------------------------
 

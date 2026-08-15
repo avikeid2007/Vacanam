@@ -9,4 +9,7 @@
     <Project Path="src/Vacanam.Speech/Vacanam.Speech.csproj" />
     <Project Path="src/Vacanam.Windows/Vacanam.Windows.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Vacanam.Tests/Vacanam.Tests.csproj" />
+  </Folder>
 </Solution>

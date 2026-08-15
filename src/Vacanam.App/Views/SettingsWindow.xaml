@@ -461,6 +461,157 @@
                 </ScrollViewer>
             </TabItem>
 
+            <!-- Commands & Snippets -->
+            <TabItem Style="{StaticResource SettingsTabItemStyle}" Header="⚡  Commands">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="32,28">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource HeadingStyle}" Text="Voice Commands &amp; Smart Punctuation" Margin="0,0,0,4"/>
+                        <TextBlock Style="{StaticResource SubheadingStyle}" Text="Control your PC hands-free and expand custom voice macros" Margin="0,0,0,24"/>
+
+                        <CheckBox Style="{StaticResource VacanamCheckBoxStyle}"
+                                  IsChecked="{Binding VoiceCommandsEnabled}"
+                                  Content="Enable Standalone Voice Action Commands"
+                                  Margin="0,0,0,6"/>
+                        <TextBlock Style="{StaticResource CaptionStyle}"
+                                   Text="Detects action commands like 'select all', 'copy that', 'undo that', 'press enter', 'save file', 'lock screen' and executes them instantly."
+                                   Margin="28,0,0,16"/>
+
+                        <CheckBox Style="{StaticResource VacanamCheckBoxStyle}"
+                                  IsChecked="{Binding EnableSmartPunctuation}"
+                                  Content="Enable Smart Verbal Punctuation &amp; Emojis"
+                                  Margin="0,0,0,6"/>
+                        <TextBlock Style="{StaticResource CaptionStyle}"
+                                   Text="Converts spoken punctuation ('comma', 'question mark', 'new line', 'smiley face') into formatted symbols with auto-capitalization."
+                                   Margin="28,0,0,24"/>
+
+                        <Separator Style="{StaticResource SectionSeparatorStyle}"/>
+
+                        <!-- Built-in Commands Reference -->
+                        <TextBlock Style="{StaticResource SubheadingStyle}" Text="Built-in Voice Commands Cheat Sheet" Margin="0,0,0,12"/>
+                        <Border Background="#0F0F14" BorderBrush="#2A2A3D" BorderThickness="1" CornerRadius="8" Padding="16,12" Margin="0,0,0,24">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                    <TextBlock Text="• 'select all' → Ctrl + A" Foreground="#C5C5DE" Margin="0,2"/>
+                                    <TextBlock Text="• 'copy that' / 'copy' → Ctrl + C" Foreground="#C5C5DE" Margin="0,2"/>
+                                    <TextBlock Text="• 'paste that' / 'paste' → Ctrl + V" Foreground="#C5C5DE" Margin="0,2"/>
+                                    <TextBlock Text="• 'undo that' / 'undo' → Ctrl + Z" Foreground="#C5C5DE" Margin="0,2"/>
+                                    <TextBlock Text="• 'redo that' / 'redo' → Ctrl + Y" Foreground="#C5C5DE" Margin="0,2"/>
+                                    <TextBlock Text="• 'save document' / 'save' → Ctrl + S" Foreground="#C5C5DE" Margin="0,2"/>
+                                    <TextBlock Text="• 'switch window' → Alt + Tab" Foreground="#C5C5DE" Margin="0,2"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="• 'press enter' → Enter key" Foreground="#C5C5DE" Margin="0,2"/>
+                                    <TextBlock Text="• 'press tab' → Tab key" Foreground="#C5C5DE" Margin="0,2"/>
+                                    <TextBlock Text="• 'press escape' → Escape key" Foreground="#C5C5DE" Margin="0,2"/>
+                                    <TextBlock Text="• 'delete line' → Erase line" Foreground="#C5C5DE" Margin="0,2"/>
+                                    <TextBlock Text="• 'delete word' → Backspace word" Foreground="#C5C5DE" Margin="0,2"/>
+                                    <TextBlock Text="• 'close window' → Alt + F4" Foreground="#C5C5DE" Margin="0,2"/>
+                                    <TextBlock Text="• 'lock computer' → Lock Windows" Foreground="#C5C5DE" Margin="0,2"/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Separator Style="{StaticResource SectionSeparatorStyle}"/>
+
+                        <!-- Custom Voice Snippets -->
+                        <TextBlock Style="{StaticResource SubheadingStyle}" Text="Custom Voice Snippets / Macros" Margin="0,0,0,4"/>
+                        <TextBlock Style="{StaticResource CaptionStyle}"
+                                   Text="Say a trigger phrase (e.g. 'insert signature') to paste pre-configured templates. Dynamic tags: {DATE}, {TIME}, {DATETIME}."
+                                   Margin="0,0,0,16"/>
+
+                        <!-- Add Snippet Inputs -->
+                        <Border Background="#0F0F14" BorderBrush="#2A2A3D" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,16">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0" Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Trigger Phrase:" Foreground="#A0A0BC" VerticalAlignment="Center" Width="110"/>
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding NewSnippetTrigger, UpdateSourceTrigger=PropertyChanged}"
+                                             Background="#1A1A24" Foreground="#F1F1F8" BorderBrush="#2A2A3D" BorderThickness="1" Padding="8,6"
+                                             FontSize="13"/>
+                                </Grid>
+
+                                <Grid Grid.Row="1" Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Template Text:" Foreground="#A0A0BC" VerticalAlignment="Top" Margin="0,6,0,0" Width="110"/>
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding NewSnippetExpansion, UpdateSourceTrigger=PropertyChanged}"
+                                             AcceptsReturn="True"
+                                             TextWrapping="Wrap"
+                                             Height="70"
+                                             Background="#1A1A24" Foreground="#F1F1F8" BorderBrush="#2A2A3D" BorderThickness="1" Padding="8,6"
+                                             FontSize="13"/>
+                                </Grid>
+
+                                <Button Grid.Row="2"
+                                        Content="+ Add Voice Snippet"
+                                        Style="{StaticResource PrimaryButtonStyle}"
+                                        HorizontalAlignment="Right"
+                                        Padding="16,6"
+                                        Command="{Binding AddSnippetCommand}"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Snippets List -->
+                        <ItemsControl ItemsSource="{Binding CustomSnippets}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#0F0F14"
+                                            BorderBrush="#2A2A3D"
+                                            BorderThickness="1"
+                                            CornerRadius="6"
+                                            Padding="14,10"
+                                            Margin="0,0,0,8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="180"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,12,0">
+                                                <TextBlock Text="🗣 Trigger" Foreground="#6366F1" FontSize="11" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding TriggerPhrase}" Foreground="#F1F1F8" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+                                                <TextBlock Text="📝 Expansion" Foreground="#A0A0BC" FontSize="11"/>
+                                                <TextBlock Text="{Binding ExpansionText}" Foreground="#C5C5DE" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
+
+                                            <Button Grid.Column="2"
+                                                    Content="Delete"
+                                                    Style="{StaticResource DangerButtonStyle}"
+                                                    Padding="10,4"
+                                                    VerticalAlignment="Center"
+                                                    Command="{Binding DataContext.DeleteSnippetCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                    CommandParameter="{Binding}"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
             <!-- Privacy -->
             <TabItem Style="{StaticResource SettingsTabItemStyle}" Header="🔒  Privacy">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="32,28">

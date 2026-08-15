@@ -12,6 +12,7 @@ public sealed class AppSettings
     public SpeechSettings Speech { get; set; } = new();
     public AiSettings Ai { get; set; } = new();
     public PrivacySettings Privacy { get; set; } = new();
+    public VoiceCommandsSettings VoiceCommands { get; set; } = new();
 }
 
 public sealed class GeneralSettings
@@ -66,3 +67,30 @@ public sealed class PrivacySettings
     public bool SaveHistory { get; set; } = false;
     public int MaxHistoryEntries { get; set; } = 1000;
 }
+
+public sealed class VoiceCommandsSettings
+{
+    public bool Enabled { get; set; } = true;
+    public bool EnableSmartPunctuation { get; set; } = true;
+    public List<CustomSnippet> CustomSnippets { get; set; } =
+    [
+        new("insert signature", "Best regards,\n[Your Name]"),
+        new("insert date", "{DATE}"),
+        new("insert time", "{TIME}")
+    ];
+}
+
+public sealed class CustomSnippet
+{
+    public string TriggerPhrase { get; set; } = string.Empty;
+    public string ExpansionText { get; set; } = string.Empty;
+
+    public CustomSnippet() { }
+
+    public CustomSnippet(string triggerPhrase, string expansionText)
+    {
+        TriggerPhrase = triggerPhrase;
+        ExpansionText = expansionText;
+    }
+}
+
