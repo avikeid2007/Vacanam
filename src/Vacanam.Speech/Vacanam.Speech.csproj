@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Vacanam.Core\Vacanam.Core.csproj" />
+    <ProjectReference Include="..\Vacanam.Windows\Vacanam.Windows.csproj" />
   </ItemGroup>
 
   <ItemGroup>

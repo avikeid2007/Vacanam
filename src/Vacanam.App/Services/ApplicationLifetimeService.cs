@@ -31,6 +31,8 @@ public sealed class ApplicationLifetimeService(
     ITextProcessor textProcessor,
     ITextInjector textInjector,
     ITranscriptHistoryRepository historyRepository,
+    IVoiceCommandProcessor voiceCommandProcessor,
+    Vacanam.Speech.Punctuation.SmartPunctuationProcessor smartPunctuationProcessor,
     IModelManager modelManager,
     SettingsManager settingsManager,
     IAutoStartService autoStartService,
@@ -289,6 +291,45 @@ public sealed class ApplicationLifetimeService(
                     bool wasActuallyEnhanced = false;
                     bool isAiEnabled = settings.Value.Ai.Enabled;
 
+                    // 1. Voice Command & Snippet Detection
+                    if (settings.Value.VoiceCommands.Enabled)
+                    {
+                        var cmdResult = await voiceCommandProcessor.ProcessAsync(transcript, _currentSessionContext);
+                        if (cmdResult.WasCommand)
+                        {
+                            if (string.IsNullOrEmpty(cmdResult.ProcessedText))
+                            {
+                                // Standalone Action Command executed (Select All, Copy, Undo, etc.)
+                                logger.LogInformation("Voice Action Command executed: {Command}", cmdResult.CommandName);
+                                overlayViewModel.StatusLabel = $"⚡ {cmdResult.CommandName}";
+                                TransitionTo(VacanamState.Completed);
+                                overlayViewModel.State = VacanamState.Completed;
+                                await Task.Delay(400);
+                                TransitionTo(VacanamState.Idle);
+                                overlayViewModel.State = VacanamState.Idle;
+                                HideOverlay();
+                                return;
+                            }
+                            else
+                            {
+                                // Custom Snippet Macro expanded
+                                logger.LogInformation("Voice Snippet expanded: {Command}", cmdResult.CommandName);
+                                transcript = cmdResult.ProcessedText;
+                            }
+                        }
+                    }
+
+                    // 2. Smart Verbal Punctuation Formatting
+                    if (settings.Value.VoiceCommands.EnableSmartPunctuation)
+                    {
+                        string formatted = smartPunctuationProcessor.Format(transcript);
+                        if (!string.IsNullOrWhiteSpace(formatted))
+                        {
+                            transcript = formatted;
+                        }
+                    }
+
+                    // 3. AI Text Enhancement
                     if (isAiEnabled)
                     {
                         try

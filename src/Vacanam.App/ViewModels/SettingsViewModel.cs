@@ -219,6 +219,58 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private bool _conservativeMode = true;
 
+    // ── Commands & Snippets Tab ───────────────────────────────────────────────
+
+    [ObservableProperty]
+    private bool _voiceCommandsEnabled = true;
+
+    partial void OnVoiceCommandsEnabledChanged(bool value)
+    {
+        HasChanges = true;
+    }
+
+    [ObservableProperty]
+    private bool _enableSmartPunctuation = true;
+
+    partial void OnEnableSmartPunctuationChanged(bool value)
+    {
+        HasChanges = true;
+    }
+
+    [ObservableProperty]
+    private string _newSnippetTrigger = string.Empty;
+
+    [ObservableProperty]
+    private string _newSnippetExpansion = string.Empty;
+
+    public ObservableCollection<CustomSnippet> CustomSnippets { get; } = [];
+
+    [RelayCommand]
+    private void AddSnippet()
+    {
+        if (string.IsNullOrWhiteSpace(NewSnippetTrigger) || string.IsNullOrWhiteSpace(NewSnippetExpansion))
+        {
+            StatusMessage = "Please enter both a trigger phrase and replacement text.";
+            return;
+        }
+
+        CustomSnippets.Add(new CustomSnippet(NewSnippetTrigger.Trim(), NewSnippetExpansion.Trim()));
+        NewSnippetTrigger = string.Empty;
+        NewSnippetExpansion = string.Empty;
+        HasChanges = true;
+        StatusMessage = "Voice snippet added. Click 'Save Changes' to apply.";
+    }
+
+    [RelayCommand]
+    private void DeleteSnippet(CustomSnippet? snippet)
+    {
+        if (snippet is not null && CustomSnippets.Remove(snippet))
+        {
+            HasChanges = true;
+            StatusMessage = "Voice snippet removed. Click 'Save Changes' to apply.";
+        }
+    }
+
     // ── Privacy Tab ───────────────────────────────────────────────────────────
 
     [ObservableProperty]
@@ -544,6 +596,16 @@ public sealed partial class SettingsViewModel : ObservableObject
         ConservativeMode = s.Ai.ConservativeMode;
         SaveHistory = s.Privacy.SaveHistory;
         MaxHistoryEntries = s.Privacy.MaxHistoryEntries;
+        VoiceCommandsEnabled = s.VoiceCommands?.Enabled ?? true;
+        EnableSmartPunctuation = s.VoiceCommands?.EnableSmartPunctuation ?? true;
+        CustomSnippets.Clear();
+        if (s.VoiceCommands?.CustomSnippets is { Count: > 0 })
+        {
+            foreach (var snippet in s.VoiceCommands.CustomSnippets)
+            {
+                CustomSnippets.Add(new CustomSnippet(snippet.TriggerPhrase, snippet.ExpansionText));
+            }
+        }
         RefreshModelStatuses();
     }
 
@@ -554,7 +616,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         Audio = new() { EnableVad = EnableVad, VadThreshold = VadThreshold, PreferredDeviceId = SelectedDeviceId },
         Speech = new() { ModelSize = WhisperModelSize, Device = WhisperDevice, Language = WhisperLanguage },
         Ai = new() { Enabled = AiEnabled, ModelFile = LlmModelFile, SystemPrompt = SystemPrompt, ConservativeMode = ConservativeMode },
-        Privacy = new() { SaveHistory = SaveHistory, MaxHistoryEntries = MaxHistoryEntries }
+        Privacy = new() { SaveHistory = SaveHistory, MaxHistoryEntries = MaxHistoryEntries },
+        VoiceCommands = new() { Enabled = VoiceCommandsEnabled, EnableSmartPunctuation = EnableSmartPunctuation, CustomSnippets = CustomSnippets.ToList() }
     };
 
     public void Reload()
