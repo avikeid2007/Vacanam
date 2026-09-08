@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Vacanam.Core.Interfaces;
 using Vacanam.Core.Models;
 using Vacanam.Windows.Interop;
@@ -53,8 +53,8 @@ public sealed class ClipboardTextInjector : ITextInjector
             // Synthesize Ctrl+V keypress
             SendCtrlV();
 
-            // Minimal delay for target application to process paste message
-            await Task.Delay(25, cancellationToken);
+            // Delay for target application to process paste message before clipboard restoration
+            await Task.Delay(120, cancellationToken);
         }
         finally
         {

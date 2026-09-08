@@ -46,4 +46,12 @@ public class SmartPunctuationProcessorTests
         string result = _processor.Format(input);
         Assert.Equal("Great work 👍 🚀 🔥", result);
     }
+
+    [Fact]
+    public void FormatsAllEmojisProperly()
+    {
+        string input = "smiley face laughing face thumbs down heart emoji party emoji";
+        string result = _processor.Format(input);
+        Assert.Equal("😊 😂 👎 ❤️ 🎉", result);
+    }
 }

@@ -48,6 +48,7 @@ public sealed class ApplicationLifetimeService(
     private DispatcherTimer? _audioMeterTimer;
     private ApplicationContext _currentSessionContext = ApplicationContext.Unknown;
     private readonly SemaphoreSlim _pipelineLock = new(1, 1);
+    private bool _stopRequestedDuringStart;
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -193,6 +194,10 @@ public sealed class ApplicationLifetimeService(
                 return;
             }
 
+            _stopRequestedDuringStart = false;
+            TransitionTo(VacanamState.StartingRecording);
+            overlayViewModel.State = VacanamState.StartingRecording;
+
             _currentSessionContext = foregroundWindowService.GetCurrentContext();
             logger.LogInformation(
                 "Recording started. Target app: {Process} — Title: '{Title}' (HWND={Hwnd:X})",
@@ -205,6 +210,14 @@ public sealed class ApplicationLifetimeService(
                 _recordingBuffer.BeginCapture();
 
                 await audioRecorder.StartAsync();
+
+                if (_stopRequestedDuringStart)
+                {
+                    logger.LogInformation("Hotkey was released during startup. Immediately stopping.");
+                    _stopRequestedDuringStart = false;
+                    await StopRecordingAndProcessAsync();
+                    return;
+                }
 
                 TransitionTo(VacanamState.Recording);
                 overlayViewModel.State = VacanamState.Recording;
@@ -225,100 +238,118 @@ public sealed class ApplicationLifetimeService(
     {
         await Application.Current.Dispatcher.InvokeAsync(async () =>
         {
+            if (mainViewModel.CurrentState is VacanamState.StartingRecording)
+            {
+                logger.LogInformation("Hotkey released while starting recording. Flagging stop request.");
+                _stopRequestedDuringStart = true;
+                return;
+            }
+
             if (mainViewModel.CurrentState is not VacanamState.Recording)
             {
                 logger.LogDebug("Hotkey released but state is {State}. Ignoring.", mainViewModel.CurrentState);
                 return;
             }
 
-            logger.LogInformation("Hotkey released. Stopping audio capture.");
-            _audioMeterTimer?.Stop();
+            await StopRecordingAndProcessAsync();
+        }).Task.Unwrap();
+    }
 
-            try
+    private async Task StopRecordingAndProcessAsync()
+    {
+        logger.LogInformation("Hotkey released. Stopping audio capture.");
+        _audioMeterTimer?.Stop();
+
+        try
+        {
+            TransitionTo(VacanamState.StoppingRecording);
+
+            await audioRecorder.StopAsync();
+            _recordingBuffer?.EndCapture();
+
+            int totalBytes = _recordingBuffer?.TotalBytes ?? 0;
+            TimeSpan duration = _recordingBuffer?.Duration ?? TimeSpan.Zero;
+            logger.LogInformation(
+                "Captured audio session complete: {Duration:g} ({Bytes} bytes 16kHz PCM).",
+                duration, totalBytes);
+
+            if (totalBytes < 1600) // Less than ~50ms of audio
             {
-                TransitionTo(VacanamState.StoppingRecording);
+                logger.LogInformation("Audio clip too short. Skipping transcription.");
+                TransitionTo(VacanamState.Idle);
+                overlayViewModel.State = VacanamState.Idle;
+                HideOverlay();
+                return;
+            }
 
-                await audioRecorder.StopAsync();
-                _recordingBuffer?.EndCapture();
+            // Whisper STT Transcription with VAD silence trimming
+            TransitionTo(VacanamState.Transcribing);
+            overlayViewModel.State = VacanamState.Transcribing;
 
-                int totalBytes = _recordingBuffer?.TotalBytes ?? 0;
-                TimeSpan duration = _recordingBuffer?.Duration ?? TimeSpan.Zero;
-                logger.LogInformation(
-                    "Captured audio session complete: {Duration:g} ({Bytes} bytes 16kHz PCM).",
-                    duration, totalBytes);
+            using var wavStream = _recordingBuffer!.ToWavStream(trimSilence: true);
+            string transcript = await speechRecognizer.TranscribeAsync(wavStream);
 
-                if (totalBytes < 1600) // Less than ~50ms of audio
+            // Clean up any stray [BLANK_AUDIO] tokens
+            transcript = CleanTranscript(transcript);
+
+            logger.LogInformation(">>> FINAL TRANSCRIPT: '{Transcript}' <<<", transcript);
+
+            if (string.IsNullOrWhiteSpace(transcript))
+            {
+                if (audioRecorder.IsMuted)
                 {
-                    logger.LogInformation("Audio clip too short. Skipping transcription.");
-                    TransitionTo(VacanamState.Idle);
-                    overlayViewModel.State = VacanamState.Idle;
-                    HideOverlay();
-                    return;
+                    overlayViewModel.StatusLabel = "Mic is Muted 🔇";
                 }
-
-                // Whisper STT Transcription with VAD silence trimming
-                TransitionTo(VacanamState.Transcribing);
-                overlayViewModel.State = VacanamState.Transcribing;
-
-                using var wavStream = _recordingBuffer!.ToWavStream(trimSilence: true);
-                string transcript = await speechRecognizer.TranscribeAsync(wavStream);
-
-                // Clean up any stray [BLANK_AUDIO] tokens
-                transcript = CleanTranscript(transcript);
-
-                logger.LogInformation(">>> FINAL TRANSCRIPT: '{Transcript}' <<<", transcript);
-
-                if (string.IsNullOrWhiteSpace(transcript))
+                else if (audioRecorder.MasterVolume < 0.30f)
                 {
-                    if (audioRecorder.IsMuted)
-                    {
-                        overlayViewModel.StatusLabel = "Mic is Muted 🔇";
-                    }
-                    else if (audioRecorder.MasterVolume < 0.30f)
-                    {
-                        int volPercent = (int)(audioRecorder.MasterVolume * 100);
-                        overlayViewModel.StatusLabel = $"Mic volume is low ({volPercent}%) 🔇";
-                    }
-                    else
-                    {
-                        overlayViewModel.StatusLabel = "No speech detected";
-                    }
-                    await Task.Delay(800);
+                    int volPercent = (int)(audioRecorder.MasterVolume * 100);
+                    overlayViewModel.StatusLabel = $"Mic volume is low ({volPercent}%) 🔇";
                 }
                 else
                 {
-                    string rawTranscript = transcript;
-                    bool wasActuallyEnhanced = false;
-                    bool isAiEnabled = settings.Value.Ai.Enabled;
+                    overlayViewModel.StatusLabel = "No speech detected";
+                }
+                await Task.Delay(800);
+            }
+            else
+            {
+                string rawTranscript = transcript;
+                bool wasActuallyEnhanced = false;
+                bool isAiEnabled = settings.Value.Ai.Enabled;
+                bool wasSnippetExpanded = false;
 
-                    // 1. Voice Command & Snippet Detection
-                    if (settings.Value.VoiceCommands.Enabled)
+                // 1. Voice Command & Snippet Detection
+                if (settings.Value.VoiceCommands.Enabled)
+                {
+                    var cmdResult = await voiceCommandProcessor.ProcessAsync(transcript, _currentSessionContext);
+                    if (cmdResult.WasCommand)
                     {
-                        var cmdResult = await voiceCommandProcessor.ProcessAsync(transcript, _currentSessionContext);
-                        if (cmdResult.WasCommand)
+                        if (string.IsNullOrEmpty(cmdResult.ProcessedText))
                         {
-                            if (string.IsNullOrEmpty(cmdResult.ProcessedText))
-                            {
-                                // Standalone Action Command executed (Select All, Copy, Undo, etc.)
-                                logger.LogInformation("Voice Action Command executed: {Command}", cmdResult.CommandName);
-                                overlayViewModel.StatusLabel = $"⚡ {cmdResult.CommandName}";
-                                TransitionTo(VacanamState.Completed);
-                                overlayViewModel.State = VacanamState.Completed;
-                                await Task.Delay(400);
-                                TransitionTo(VacanamState.Idle);
-                                overlayViewModel.State = VacanamState.Idle;
-                                HideOverlay();
-                                return;
-                            }
-                            else
-                            {
-                                // Custom Snippet Macro expanded
-                                logger.LogInformation("Voice Snippet expanded: {Command}", cmdResult.CommandName);
-                                transcript = cmdResult.ProcessedText;
-                            }
+                            // Standalone Action Command executed (Select All, Copy, Undo, etc.)
+                            logger.LogInformation("Voice Action Command executed: {Command}", cmdResult.CommandName);
+                            overlayViewModel.StatusLabel = $"⚡ {cmdResult.CommandName}";
+                            TransitionTo(VacanamState.Completed);
+                            overlayViewModel.State = VacanamState.Completed;
+                            await Task.Delay(400);
+                            TransitionTo(VacanamState.Idle);
+                            overlayViewModel.State = VacanamState.Idle;
+                            HideOverlay();
+                            return;
+                        }
+                        else
+                        {
+                            // Custom Snippet Macro expanded
+                            logger.LogInformation("Voice Snippet expanded: {Command}", cmdResult.CommandName);
+                            transcript = cmdResult.ProcessedText;
+                            wasSnippetExpanded = true;
                         }
                     }
+                }
 
+                // Only apply smart punctuation & AI rewrite if it wasn't a custom snippet expansion
+                if (!wasSnippetExpanded)
+                {
                     // 2. Smart Verbal Punctuation Formatting
                     if (settings.Value.VoiceCommands.EnableSmartPunctuation)
                     {
@@ -352,61 +383,61 @@ public sealed class ApplicationLifetimeService(
                             logger.LogWarning(ex, "AI text enhancement failed. Falling back to raw transcript.");
                         }
                     }
-
-                    overlayViewModel.StatusLabel = transcript;
-
-                    // Text Injection into target window
-                    TransitionTo(VacanamState.Inserting);
-                    overlayViewModel.State = VacanamState.Inserting;
-
-                    await textInjector.InjectAsync(transcript, _currentSessionContext);
-
-                    if (settings.Value.Privacy.SaveHistory)
-                    {
-                        try
-                        {
-                            var record = new TranscriptRecord(
-                                Id: 0,
-                                TimestampUtc: DateTime.UtcNow,
-                                RawTranscript: rawTranscript,
-                                FinalText: transcript,
-                                TargetApp: string.IsNullOrWhiteSpace(_currentSessionContext.ProcessName) ? "Unknown" : _currentSessionContext.ProcessName,
-                                DurationSeconds: duration.TotalSeconds,
-                                WasAiEnhanced: wasActuallyEnhanced
-                            );
-                            await historyRepository.AddAsync(record);
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.LogWarning(ex, "Failed to save transcript to local history database.");
-                        }
-                    }
-
-                    TransitionTo(VacanamState.Completed);
-                    overlayViewModel.State = VacanamState.Completed;
-                    await Task.Delay(300);
                 }
 
-                TransitionTo(VacanamState.Idle);
-                overlayViewModel.State = VacanamState.Idle;
-                HideOverlay();
+                overlayViewModel.StatusLabel = transcript;
+
+                // Text Injection into target window
+                TransitionTo(VacanamState.Inserting);
+                overlayViewModel.State = VacanamState.Inserting;
+
+                await textInjector.InjectAsync(transcript, _currentSessionContext);
+
+                if (settings.Value.Privacy.SaveHistory)
+                {
+                    try
+                    {
+                        var record = new TranscriptRecord(
+                            Id: 0,
+                            TimestampUtc: DateTime.UtcNow,
+                            RawTranscript: rawTranscript,
+                            FinalText: transcript,
+                            TargetApp: string.IsNullOrWhiteSpace(_currentSessionContext.ProcessName) ? "Unknown" : _currentSessionContext.ProcessName,
+                            DurationSeconds: duration.TotalSeconds,
+                            WasAiEnhanced: wasActuallyEnhanced
+                        );
+                        await historyRepository.AddAsync(record);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "Failed to save transcript to local history database.");
+                    }
+                }
+
+                TransitionTo(VacanamState.Completed);
+                overlayViewModel.State = VacanamState.Completed;
+                await Task.Delay(300);
             }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error during transcription & injection pipeline: {Message}", ex.Message);
-                overlayViewModel.StatusLabel = $"Error: {ex.Message}";
-                TransitionTo(VacanamState.Error);
-                await Task.Delay(2500);
-                TransitionTo(VacanamState.Idle);
-                overlayViewModel.State = VacanamState.Idle;
-                HideOverlay();
-            }
-            finally
-            {
-                _recordingBuffer?.Dispose();
-                _recordingBuffer = null;
-            }
-        }).Task.Unwrap();
+
+            TransitionTo(VacanamState.Idle);
+            overlayViewModel.State = VacanamState.Idle;
+            HideOverlay();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error during transcription & injection pipeline: {Message}", ex.Message);
+            overlayViewModel.StatusLabel = $"Error: {ex.Message}";
+            TransitionTo(VacanamState.Error);
+            await Task.Delay(2500);
+            TransitionTo(VacanamState.Idle);
+            overlayViewModel.State = VacanamState.Idle;
+            HideOverlay();
+        }
+        finally
+        {
+            _recordingBuffer?.Dispose();
+            _recordingBuffer = null;
+        }
     }
 
     private static string CleanTranscript(string raw)

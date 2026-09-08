@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\src\Vacanam.Core\Vacanam.Core.csproj" />
     <ProjectReference Include="..\..\src\Vacanam.Windows\Vacanam.Windows.csproj" />
     <ProjectReference Include="..\..\src\Vacanam.Speech\Vacanam.Speech.csproj" />
+    <ProjectReference Include="..\..\src\Vacanam.LLM\Vacanam.LLM.csproj" />
   </ItemGroup>
 
 </Project>

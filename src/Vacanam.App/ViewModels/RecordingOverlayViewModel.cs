@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 using Vacanam.Core.Enums;
 
@@ -37,6 +37,7 @@ public sealed partial class RecordingOverlayViewModel : ObservableObject
         };
 
         IsVisible = value is not VacanamState.Idle;
+        OnPropertyChanged(nameof(StateColorKey));
     }
 
     // Returns a colour key name for the state indicator ring.

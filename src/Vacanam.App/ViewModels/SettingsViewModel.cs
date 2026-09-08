@@ -520,6 +520,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _options.Value.Speech = settings.Speech;
         _options.Value.Ai = settings.Ai;
         _options.Value.Privacy = settings.Privacy;
+        _options.Value.VoiceCommands = settings.VoiceCommands;
 
         _autoStartService.SetAutoStart(settings.General.StartWithWindows);
         _originalSettings = settings;

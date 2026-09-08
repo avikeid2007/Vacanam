@@ -15,7 +15,7 @@ namespace Vacanam.Windows.Hotkeys;
 ///
 /// Design decisions:
 /// - Uses a hidden HotkeyMessageWindow to own the HWND and process WM_HOTKEY.
-/// - Does NOT use SetWindowsHookEx (global keyboard hook) — RegisterHotKey is sufficient
+/// - Does NOT use SetWindowsHookEx (global keyboard hook) â€” RegisterHotKey is sufficient
 ///   and requires no elevated privileges for standard user-level keys.
 /// - Push-to-talk "hold" detection: WM_HOTKEY fires on press. Key-up is detected by
 ///   polling GetAsyncKeyState on a background timer (lightweight, ~16ms interval).
@@ -84,15 +84,10 @@ public sealed class GlobalHotkeyService : IGlobalHotkeyService
                     }
                     return false;
                 }
-
                 IsRegistered = true;
                 _logger.LogInformation(
                     "Global hotkey registered: modifiers={Modifiers:X}, vk={VK:X2} (Ctrl+Space).",
                     modifiers, _virtualKey);
-
-                // Start hold-polling timer for push-to-talk mode
-                if (_settings.Hotkeys.PushToTalk)
-                    StartHoldPoller();
 
                 return true;
             }
@@ -133,7 +128,7 @@ public sealed class GlobalHotkeyService : IGlobalHotkeyService
 
         _messageWindow = new HotkeyMessageWindow();
         _messageWindow.Show(); // Must call Show() to initialise SourceInitialized
-        _messageWindow.Hide(); // Immediately hide — window is invisible to user
+        _messageWindow.Hide(); // Immediately hide â€” window is invisible to user
         _messageWindow.HotkeyReceived += OnHotkeyReceived;
 
         _logger.LogDebug("HotkeyMessageWindow created. HWND={Handle:X}", _messageWindow.Handle);
@@ -145,17 +140,18 @@ public sealed class GlobalHotkeyService : IGlobalHotkeyService
 
         if (_settings.Hotkeys.PushToTalk)
         {
-            // Push-to-talk: key press ? start recording
+            // Push-to-talk: key press -> start recording
             if (!_isKeyCurrentlyHeld)
             {
                 _isKeyCurrentlyHeld = true;
                 _logger.LogDebug("Hotkey pressed (push-to-talk start).");
+                StartHoldPoller();
                 HotkeyPressed?.Invoke(this, EventArgs.Empty);
             }
         }
         else
         {
-            // Toggle mode: first press ? start, second press ? stop
+            // Toggle mode: first press -> start, second press -> stop
             if (!_isKeyCurrentlyHeld)
             {
                 _isKeyCurrentlyHeld = true;
@@ -204,7 +200,7 @@ public sealed class GlobalHotkeyService : IGlobalHotkeyService
         bool ctrlDown  = (ctrlState  & 0x8000) != 0;
         bool spaceDown = (spaceState & 0x8000) != 0;
 
-        // Both modifier AND key must still be held — release when either is lifted
+        // Both modifier AND key must still be held â€” release when either is lifted
         bool stillHeld = _modifiers.HasFlag(HotkeyModifiers.Ctrl)
             ? ctrlDown && spaceDown
             : spaceDown;
@@ -212,6 +208,7 @@ public sealed class GlobalHotkeyService : IGlobalHotkeyService
         if (!stillHeld)
         {
             _isKeyCurrentlyHeld = false;
+            StopHoldPoller();
             _logger.LogDebug("Hotkey released (push-to-talk stop).");
             HotkeyReleased?.Invoke(this, EventArgs.Empty);
         }

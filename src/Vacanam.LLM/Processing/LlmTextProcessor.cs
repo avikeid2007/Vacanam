@@ -116,6 +116,11 @@ public sealed class LlmTextProcessor : ITextProcessor
                 systemPrompt = SystemPrompts.DefaultGrammarFix;
             }
 
+            if (_settings.Value.Ai.ConservativeMode)
+            {
+                systemPrompt += "\nCRITICAL: Do not rephrase, reword, or rewrite the text. Only fix obvious spelling mistakes and punctuation. Keep all original words and sentence structures intact.";
+            }
+
             // Standard ChatML format for Qwen2.5, SmolLM2, Llama-3 instruction models
             string prompt =
                 $"<|im_start|>system\n{systemPrompt}\n<|im_end|>\n" +
@@ -132,10 +137,9 @@ public sealed class LlmTextProcessor : ITextProcessor
                     "<|endoftext|>",
                     "<|im_start|>",
                     "</s>",
-                    "\n\n",
                     "\nNote:",
-                    "\nThe text",
-                    "Explanation:"
+                    "\nExplanation:",
+                    "\nThe text you provided"
                 ]
             };
 
@@ -145,11 +149,11 @@ public sealed class LlmTextProcessor : ITextProcessor
                 sb.Append(token);
                 TokenGenerated?.Invoke(this, new TokenEventArgs(token));
 
-                // Early exit if token stream starts generating chatter
+                // Early exit if token stream starts generating chatter on a new line
                 string currentText = sb.ToString();
-                if (currentText.Contains("Note:", StringComparison.OrdinalIgnoreCase) ||
-                    currentText.Contains("Explanation:", StringComparison.OrdinalIgnoreCase) ||
-                    currentText.Contains("The text you provided", StringComparison.OrdinalIgnoreCase))
+                if (currentText.Contains("\nNote:", StringComparison.OrdinalIgnoreCase) ||
+                    currentText.Contains("\nExplanation:", StringComparison.OrdinalIgnoreCase) ||
+                    currentText.Contains("\nThe text you provided", StringComparison.OrdinalIgnoreCase))
                 {
                     break;
                 }
@@ -157,7 +161,7 @@ public sealed class LlmTextProcessor : ITextProcessor
 
             string rawOutput = sb.ToString().Trim();
 
-            // Post-processing: extract ONLY the first cleaned line and strip notes/explanations
+            // Post-processing: extract cleaned content and strip notes/explanations
             string cleaned = SanitizeLlmOutput(rawOutput);
 
             _logger.LogInformation("LLM refinement completed: '{Result}'", cleaned);
@@ -199,39 +203,76 @@ public sealed class LlmTextProcessor : ITextProcessor
         _lock.Dispose();
     }
 
-    private static string SanitizeLlmOutput(string rawOutput)
+    public static string SanitizeLlmOutput(string rawOutput)
     {
         if (string.IsNullOrWhiteSpace(rawOutput)) return string.Empty;
 
-        string text = rawOutput;
+        var lines = rawOutput.Split(["\r\n", "\r", "\n"], StringSplitOptions.None);
+        var resultLines = new List<string>();
 
-        // Cut off explanations, notes, or meta-commentary
-        string[] stopSubstrings = ["Note:", "Explanation:", "The text you provided", "The original text", "The cleaned text", "Cleaned text:"];
-        foreach (var sub in stopSubstrings)
+        string[] stopPrefixes =
+        [
+            "note:",
+            "explanation:",
+            "the text you provided",
+            "the original text",
+            "here is what i changed",
+            "here's what i changed",
+            "changes made:"
+        ];
+
+        foreach (var line in lines)
         {
-            int index = text.IndexOf(sub, StringComparison.OrdinalIgnoreCase);
-            if (index > 0)
+            string trimmed = line.Trim();
+            if (string.IsNullOrEmpty(trimmed))
             {
-                text = text[..index].Trim();
+                if (resultLines.Count > 0)
+                {
+                    resultLines.Add(string.Empty);
+                }
+                continue;
             }
+
+            // Check if this line begins meta-commentary
+            bool isMeta = false;
+            foreach (var prefix in stopPrefixes)
+            {
+                if (trimmed.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    isMeta = true;
+                    break;
+                }
+            }
+
+            if (isMeta)
+            {
+                // Discard this line and all subsequent lines (trailing commentary)
+                break;
+            }
+
+            // Strip leading prompt repetition / labels on the first substantive line
+            if (resultLines.Count == 0)
+            {
+                if (trimmed.StartsWith("Cleaned text:", StringComparison.OrdinalIgnoreCase))
+                    trimmed = trimmed["Cleaned text:".Length..].Trim();
+                else if (trimmed.StartsWith("Output:", StringComparison.OrdinalIgnoreCase))
+                    trimmed = trimmed["Output:".Length..].Trim();
+                else if (trimmed.StartsWith("Result:", StringComparison.OrdinalIgnoreCase))
+                    trimmed = trimmed["Result:".Length..].Trim();
+            }
+
+            resultLines.Add(trimmed);
         }
 
-        // Take only the first non-empty line
-        var lines = text.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (lines.Length > 0)
+        // Trim trailing empty lines
+        while (resultLines.Count > 0 && string.IsNullOrWhiteSpace(resultLines[^1]))
         {
-            text = lines[0];
+            resultLines.RemoveAt(resultLines.Count - 1);
         }
 
-        // Strip prefixes if LLM prefixed "Cleaned Text:" or "Output:"
-        if (text.StartsWith("Cleaned text:", StringComparison.OrdinalIgnoreCase))
-            text = text["Cleaned text:".Length..].Trim();
-        else if (text.StartsWith("Output:", StringComparison.OrdinalIgnoreCase))
-            text = text["Output:".Length..].Trim();
-        else if (text.StartsWith("Result:", StringComparison.OrdinalIgnoreCase))
-            text = text["Result:".Length..].Trim();
+        string text = string.Join("\n", resultLines).Trim();
 
-        // Strip surrounding quotes
+        // Strip surrounding quotes if the whole text is wrapped
         if ((text.StartsWith('"') && text.EndsWith('"')) || (text.StartsWith('\'') && text.EndsWith('\'')))
         {
             if (text.Length >= 2)
