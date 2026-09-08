@@ -138,7 +138,7 @@
                         <TextBlock Style="{StaticResource HeadingStyle}" Text="Hotkeys" Margin="0,0,0,4"/>
                         <TextBlock Style="{StaticResource SubheadingStyle}" Text="Global keyboard shortcut configuration" Margin="0,0,0,24"/>
 
-                        <TextBlock Style="{StaticResource BodyStyle}" Text="Push-to-Talk Shortcut" Margin="0,0,0,8"/>
+                        <TextBlock Style="{StaticResource BodyStyle}" Text="Primary Dictation Shortcut" Margin="0,0,0,8"/>
                         <Border Background="#242433" CornerRadius="8" Padding="16,12" Width="240" HorizontalAlignment="Left">
                             <TextBlock Text="{Binding HotkeyDisplayText}"
                                        Foreground="#6366F1"
@@ -148,8 +148,29 @@
                                        HorizontalAlignment="Center"/>
                         </Border>
                         <TextBlock Style="{StaticResource CaptionStyle}"
-                                   Text="Hotkey customisation will be available in a future update."
+                                   Text="Hold to dictate speech into any focused application. Release to transcribe &amp; paste."
                                    Margin="0,8,0,24"/>
+
+                        <Separator Style="{StaticResource SectionSeparatorStyle}"/>
+
+                        <TextBlock Style="{StaticResource SubheadingStyle}" Text="🪄 'Ask AI' / Voice Transform Mode" Margin="0,0,0,8"/>
+                        <CheckBox Style="{StaticResource VacanamCheckBoxStyle}"
+                                  IsChecked="{Binding EnableAiTransformHotkey}"
+                                  Content="Enable 'Ask AI' &amp; Voice Transform shortcut (Shift + Space)"
+                                  Margin="0,0,0,12"/>
+                        <Border Background="#242433" CornerRadius="8" Padding="16,12" Width="240" HorizontalAlignment="Left">
+                            <TextBlock Text="{Binding AiTransformHotkeyDisplayText}"
+                                       Foreground="#A855F7"
+                                       FontFamily="Consolas, monospace"
+                                       FontSize="16"
+                                       FontWeight="SemiBold"
+                                       HorizontalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Style="{StaticResource CaptionStyle}"
+                                   Text="Select any text in an app and hold Shift+Space to transform it with AI (e.g. 'rewrite politely', 'translate to German', 'summarize in 3 bullets'). Or hold without selecting text to generate content directly at the cursor."
+                                   Margin="0,8,0,24"
+                                   TextWrapping="Wrap"
+                                   MaxWidth="560"/>
 
                         <Separator Style="{StaticResource SectionSeparatorStyle}"/>
 
@@ -224,6 +245,17 @@
                         <TextBlock Style="{StaticResource CaptionStyle}"
                                    Text="Lower = more sensitive (picks up quieter speech). Higher = less noise."
                                    Margin="0,4,0,0"/>
+
+                        <Separator Style="{StaticResource SectionSeparatorStyle}"/>
+
+                        <TextBlock Style="{StaticResource SubheadingStyle}" Text="Audio Feedback &amp; Earcons" Margin="0,0,0,8"/>
+                        <CheckBox Style="{StaticResource VacanamCheckBoxStyle}"
+                                  IsChecked="{Binding EnableSoundEffects}"
+                                  Content="Play subtle sound effects on recording start, stop, and completion"
+                                  Margin="0,0,0,8"/>
+                        <TextBlock Style="{StaticResource CaptionStyle}"
+                                   Text="Low-latency auditory cues confirming voice typing events without looking at the screen."
+                                   Margin="0,0,0,16"/>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -359,7 +391,20 @@
 
                         <TextBlock Style="{StaticResource CaptionStyle}"
                                    Text="{Binding AiStatusCaption}"
-                                   Margin="0,0,0,20"/>
+                                   Margin="0,0,0,16"/>
+
+                        <Border Background="#201A30"
+                                BorderBrush="#4A2A6D"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="12,10"
+                                Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Foreground="#C084FC" FontWeight="SemiBold" FontSize="13" Text="🪄 'Ask AI' / Voice Transform Mode (Shift + Space)" Margin="0,0,0,4"/>
+                                <TextBlock Foreground="#D1D5DB" FontSize="12" TextWrapping="Wrap"
+                                           Text="Highlight text in any application and hold Shift+Space to speak instructions (e.g. 'rewrite politely', 'summarize', 'fix this code'). Or hold at an empty cursor to generate answers directly."/>
+                            </StackPanel>
+                        </Border>
 
                         <Separator Style="{StaticResource SectionSeparatorStyle}"/>
 
@@ -388,7 +433,63 @@
                                  Margin="0,0,0,6"/>
                         <TextBlock Style="{StaticResource CaptionStyle}"
                                    Text="Customize instructions for the local LLM text refinement engine."
-                                   Margin="0,0,0,20"/>
+                                   Margin="0,0,0,12"/>
+
+                        <CheckBox Style="{StaticResource VacanamCheckBoxStyle}"
+                                  IsChecked="{Binding ConservativeMode}"
+                                  Content="Conservative Mode — only fix typos and punctuation, never reword"
+                                  Margin="0,0,0,16"/>
+
+                        <Separator Style="{StaticResource SectionSeparatorStyle}"/>
+
+                        <TextBlock Style="{StaticResource SubheadingStyle}" Text="App-Specific Context Profiles" Margin="0,0,0,4"/>
+                        <CheckBox Style="{StaticResource VacanamCheckBoxStyle}"
+                                  IsChecked="{Binding EnableContextProfiles}"
+                                  Content="Auto-tune tone &amp; formatting based on active application"
+                                  Margin="0,0,0,8"/>
+                        <TextBlock Style="{StaticResource CaptionStyle}"
+                                   Text="Adapts the LLM system prompt dynamically when typing in Coding IDEs, Chat apps, Email clients, or Notes."
+                                   Margin="0,0,0,12"/>
+
+                        <!-- Context Profiles Cards -->
+                        <ItemsControl ItemsSource="{Binding ContextProfiles}" Margin="0,0,0,16">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#242433"
+                                            BorderBrush="#2A2A3D"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="14,10"
+                                            Margin="0,0,0,8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}"
+                                                           Foreground="#F1F1F8"
+                                                           FontWeight="SemiBold"
+                                                           FontSize="13"/>
+                                                <TextBlock Text="{Binding Description}"
+                                                           Foreground="#837AF9"
+                                                           FontSize="11"
+                                                           Margin="0,2,0,0"/>
+                                                <TextBlock Text="{Binding ProcessMatches, StringFormat='Apps: {0}'}"
+                                                           Foreground="#6B6B8A"
+                                                           FontSize="10"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <CheckBox Grid.Column="1"
+                                                      Style="{StaticResource VacanamCheckBoxStyle}"
+                                                      IsChecked="{Binding IsEnabled}"
+                                                      VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
 
                         <Separator Style="{StaticResource SectionSeparatorStyle}"/>
 

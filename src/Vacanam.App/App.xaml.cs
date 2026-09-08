@@ -106,6 +106,7 @@ public partial class App : Application
                             opts.Speech  = loaded.Speech;
                             opts.Ai      = loaded.Ai;
                             opts.Privacy = loaded.Privacy;
+                            opts.VoiceCommands = loaded.VoiceCommands;
                         });
 
                     // Settings manager

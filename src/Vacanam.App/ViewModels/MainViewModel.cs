@@ -42,7 +42,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     public string TrayTooltip => CurrentState switch
     {
-        VacanamState.Idle => "Vacanam — Ready (Ctrl+Space to record)",
+        VacanamState.Idle => "Vacanam — Ready (Ctrl+Space: Dictate | Shift+Space: Ask AI)",
         VacanamState.Recording => "Vacanam — Recording…",
         VacanamState.Transcribing => "Vacanam — Transcribing…",
         VacanamState.Processing => "Vacanam — AI processing…",
@@ -103,8 +103,16 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
+    [RelayCommand]
+    private void OpenQuickStart()
+    {
+        _logger.LogDebug("OpenQuickStart command invoked.");
+        QuickStartRequested?.Invoke(this, EventArgs.Empty);
+    }
+
     // ── Events (for ApplicationLifetimeService) ───────────────────────────────
 
+    public event EventHandler? QuickStartRequested;
     public event EventHandler? SettingsRequested;
     public event EventHandler? ExitRequested;
     public event EventHandler? StartRecordingRequested;

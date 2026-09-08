@@ -125,6 +125,11 @@
 
                 <Separator Style="{StaticResource DarkMenuSeparatorStyle}"/>
 
+                <!-- Quick Start & Shortcuts Guide -->
+                <MenuItem Header="💡  Quick Start &amp; Shortcuts"
+                          Style="{StaticResource DarkMenuItemStyle}"
+                          Command="{Binding OpenQuickStartCommand}"/>
+
                 <!-- Settings -->
                 <MenuItem Header="⚙  Settings"
                           Style="{StaticResource DarkMenuItemStyle}"

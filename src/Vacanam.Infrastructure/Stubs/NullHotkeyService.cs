@@ -6,17 +6,20 @@ namespace Vacanam.Infrastructure.Stubs;
 
 /// <summary>
 /// [MOCK] Null implementation of IGlobalHotkeyService.
-/// Used in Phase 1 (App Shell). Will be replaced by Win32 RegisterHotKey in Phase 2.
 /// </summary>
 internal sealed class NullHotkeyService(ILogger<NullHotkeyService> logger) : IGlobalHotkeyService
 {
     public event EventHandler? HotkeyPressed;
     public event EventHandler? HotkeyReleased;
+    public event EventHandler? AiTransformHotkeyPressed;
+    public event EventHandler? AiTransformHotkeyReleased;
+
     public bool IsRegistered => false;
+    public bool IsAiTransformRegistered => false;
 
     public bool Register(nint windowHandle)
     {
-        logger.LogWarning("[MOCK] NullHotkeyService.Register — hotkey registration not yet implemented (Phase 2).");
+        logger.LogWarning("[MOCK] NullHotkeyService.Register - hotkey registration not implemented in stub.");
         return false;
     }
 
@@ -24,10 +27,17 @@ internal sealed class NullHotkeyService(ILogger<NullHotkeyService> logger) : IGl
 
     public bool UpdateRegistration(nint windowHandle, int modifiers, int virtualKey)
     {
-        logger.LogWarning("[MOCK] NullHotkeyService.UpdateRegistration — not yet implemented.");
+        logger.LogWarning("[MOCK] NullHotkeyService.UpdateRegistration - not implemented in stub.");
         return false;
     }
 
+    public bool UpdateAiTransformRegistration(nint windowHandle, int modifiers, int virtualKey)
+    {
+        logger.LogWarning("[MOCK] NullHotkeyService.UpdateAiTransformRegistration - not implemented in stub.");
+        return false;
+    }
+
+    public void SuppressHoldDetection(bool suppress) { }
+
     public void Dispose() { }
 }
-

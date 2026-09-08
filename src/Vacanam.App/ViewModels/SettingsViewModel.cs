@@ -74,6 +74,17 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _hotkeyDisplayText = "Ctrl + Space";
 
+    [ObservableProperty]
+    private bool _enableAiTransformHotkey = true;
+
+    partial void OnEnableAiTransformHotkeyChanged(bool value)
+    {
+        HasChanges = true;
+    }
+
+    [ObservableProperty]
+    private string _aiTransformHotkeyDisplayText = "Shift + Space";
+
     // ── Audio Tab ─────────────────────────────────────────────────────────────
 
     [ObservableProperty]
@@ -84,6 +95,14 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private string _selectedDeviceId = string.Empty;
+
+    [ObservableProperty]
+    private bool _enableSoundEffects = true;
+
+    partial void OnEnableSoundEffectsChanged(bool value)
+    {
+        HasChanges = true;
+    }
 
     [ObservableProperty]
     private double _micVolume = 100;
@@ -203,11 +222,29 @@ public sealed partial class SettingsViewModel : ObservableObject
         HasChanges = true;
     }
 
+    [ObservableProperty]
+    private string _transformSystemPrompt = string.Empty;
+
+    partial void OnTransformSystemPromptChanged(string value)
+    {
+        HasChanges = true;
+    }
+
+    [ObservableProperty]
+    private string _askAiSystemPrompt = string.Empty;
+
+    partial void OnAskAiSystemPromptChanged(string value)
+    {
+        HasChanges = true;
+    }
+
     [RelayCommand]
     private void ResetSystemPrompt()
     {
         SystemPrompt = Vacanam.LLM.Prompts.SystemPrompts.DefaultGrammarFix;
-        StatusMessage = "System prompt reset to default rules.";
+        TransformSystemPrompt = new AppSettings().Ai.TransformSystemPrompt;
+        AskAiSystemPrompt = new AppSettings().Ai.AskAiSystemPrompt;
+        StatusMessage = "System prompts reset to default rules.";
     }
 
     public List<LlmModelItem> LlmModels { get; } =
@@ -218,6 +255,16 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _conservativeMode = true;
+
+    [ObservableProperty]
+    private bool _enableContextProfiles = true;
+
+    partial void OnEnableContextProfilesChanged(bool value)
+    {
+        HasChanges = true;
+    }
+
+    public ObservableCollection<AppContextProfile> ContextProfiles { get; } = [];
 
     // ── Commands & Snippets Tab ───────────────────────────────────────────────
 
@@ -520,6 +567,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         _options.Value.Speech = settings.Speech;
         _options.Value.Ai = settings.Ai;
         _options.Value.Privacy = settings.Privacy;
+        _options.Value.VoiceCommands = settings.VoiceCommands;
 
         _autoStartService.SetAutoStart(settings.General.StartWithWindows);
         _originalSettings = settings;
@@ -578,9 +626,11 @@ public sealed partial class SettingsViewModel : ObservableObject
         ShowTrayNotifications = s.General.ShowTrayNotifications;
         DefaultMode = s.General.DefaultMode;
         PushToTalk = s.Hotkeys.PushToTalk;
+        EnableAiTransformHotkey = s.Hotkeys.EnableAiTransformHotkey;
         EnableVad = s.Audio.EnableVad;
         VadThreshold = s.Audio.VadThreshold;
         SelectedDeviceId = s.Audio.PreferredDeviceId;
+        EnableSoundEffects = s.Audio.EnableSoundEffects;
         if (_audioRecorder is not null)
         {
             MicVolume = Math.Round(_audioRecorder.MasterVolume * 100.0);
@@ -593,7 +643,16 @@ public sealed partial class SettingsViewModel : ObservableObject
         AiEnabled = s.Ai.Enabled;
         LlmModelFile = s.Ai.ModelFile;
         SystemPrompt = string.IsNullOrWhiteSpace(s.Ai.SystemPrompt) ? Vacanam.LLM.Prompts.SystemPrompts.DefaultGrammarFix : s.Ai.SystemPrompt;
+        TransformSystemPrompt = string.IsNullOrWhiteSpace(s.Ai.TransformSystemPrompt) ? new AppSettings().Ai.TransformSystemPrompt : s.Ai.TransformSystemPrompt;
+        AskAiSystemPrompt = string.IsNullOrWhiteSpace(s.Ai.AskAiSystemPrompt) ? new AppSettings().Ai.AskAiSystemPrompt : s.Ai.AskAiSystemPrompt;
         ConservativeMode = s.Ai.ConservativeMode;
+        EnableContextProfiles = s.Ai.EnableContextProfiles;
+        ContextProfiles.Clear();
+        var profiles = (s.Ai.ContextProfiles is { Count: > 0 }) ? s.Ai.ContextProfiles : AiSettings.DefaultContextProfiles();
+        foreach (var p in profiles)
+        {
+            ContextProfiles.Add(new AppContextProfile(p.Id, p.Name, p.Description, p.ProcessMatches, p.PromptInstruction, p.IsEnabled));
+        }
         SaveHistory = s.Privacy.SaveHistory;
         MaxHistoryEntries = s.Privacy.MaxHistoryEntries;
         VoiceCommandsEnabled = s.VoiceCommands?.Enabled ?? true;
@@ -611,11 +670,36 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     private AppSettings BuildSettings() => new()
     {
-        General = new() { StartWithWindows = StartWithWindows, ShowTrayNotifications = ShowTrayNotifications, DefaultMode = DefaultMode },
-        Hotkeys = new() { PushToTalk = PushToTalk, Modifiers = 2, VirtualKey = 0x20 },
-        Audio = new() { EnableVad = EnableVad, VadThreshold = VadThreshold, PreferredDeviceId = SelectedDeviceId },
+        General = new()
+        {
+            StartWithWindows = StartWithWindows,
+            ShowTrayNotifications = ShowTrayNotifications,
+            DefaultMode = DefaultMode,
+            HasCompletedOnboarding = _originalSettings?.General?.HasCompletedOnboarding ?? false,
+            ShowLaunchBannerOnStartup = _originalSettings?.General?.ShowLaunchBannerOnStartup ?? true
+        },
+        Hotkeys = new()
+        {
+            PushToTalk = PushToTalk,
+            Modifiers = 2,
+            VirtualKey = 0x20,
+            EnableAiTransformHotkey = EnableAiTransformHotkey,
+            AiTransformModifiers = 4,
+            AiTransformVirtualKey = 0x20
+        },
+        Audio = new() { EnableVad = EnableVad, VadThreshold = VadThreshold, PreferredDeviceId = SelectedDeviceId, EnableSoundEffects = EnableSoundEffects },
         Speech = new() { ModelSize = WhisperModelSize, Device = WhisperDevice, Language = WhisperLanguage },
-        Ai = new() { Enabled = AiEnabled, ModelFile = LlmModelFile, SystemPrompt = SystemPrompt, ConservativeMode = ConservativeMode },
+        Ai = new()
+        {
+            Enabled = AiEnabled,
+            ModelFile = LlmModelFile,
+            SystemPrompt = SystemPrompt,
+            TransformSystemPrompt = TransformSystemPrompt,
+            AskAiSystemPrompt = AskAiSystemPrompt,
+            ConservativeMode = ConservativeMode,
+            EnableContextProfiles = EnableContextProfiles,
+            ContextProfiles = ContextProfiles.ToList()
+        },
         Privacy = new() { SaveHistory = SaveHistory, MaxHistoryEntries = MaxHistoryEntries },
         VoiceCommands = new() { Enabled = VoiceCommandsEnabled, EnableSmartPunctuation = EnableSmartPunctuation, CustomSnippets = CustomSnippets.ToList() }
     };

@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 using Vacanam.Core.Enums;
 
@@ -22,27 +22,53 @@ public sealed partial class RecordingOverlayViewModel : ObservableObject
     [ObservableProperty]
     private bool _isVisible = false;
 
+    [ObservableProperty]
+    private bool _isAiTransformMode = false;
+
+    partial void OnIsAiTransformModeChanged(bool value)
+    {
+        OnPropertyChanged(nameof(StateColorKey));
+    }
+
     partial void OnStateChanged(VacanamState value)
     {
-        StatusLabel = value switch
+        if (IsAiTransformMode)
         {
-            VacanamState.Recording => "Listening…",
-            VacanamState.StoppingRecording => "Processing…",
-            VacanamState.Transcribing => "Transcribing…",
-            VacanamState.Processing => "AI mode…",
-            VacanamState.Inserting => "Inserting…",
-            VacanamState.Completed => "Done ✓",
-            VacanamState.Error => "Error",
-            _ => string.Empty
-        };
+            StatusLabel = value switch
+            {
+                VacanamState.Recording => string.IsNullOrWhiteSpace(StatusLabel) || StatusLabel == "Listening…" ? "🪄 Listening…" : StatusLabel,
+                VacanamState.StoppingRecording => "🪄 Processing…",
+                VacanamState.Transcribing => "🪄 Transcribing…",
+                VacanamState.Processing => "🪄 AI thinking…",
+                VacanamState.Inserting => "Inserting…",
+                VacanamState.Completed => "Done ✓",
+                VacanamState.Error => "Error",
+                _ => string.Empty
+            };
+        }
+        else
+        {
+            StatusLabel = value switch
+            {
+                VacanamState.Recording => "Listening…",
+                VacanamState.StoppingRecording => "Processing…",
+                VacanamState.Transcribing => "Transcribing…",
+                VacanamState.Processing => "AI mode…",
+                VacanamState.Inserting => "Inserting…",
+                VacanamState.Completed => "Done ✓",
+                VacanamState.Error => "Error",
+                _ => string.Empty
+            };
+        }
 
         IsVisible = value is not VacanamState.Idle;
+        OnPropertyChanged(nameof(StateColorKey));
     }
 
     // Returns a colour key name for the state indicator ring.
     public string StateColorKey => State switch
     {
-        VacanamState.Recording => "RecordingBrush",
+        VacanamState.Recording => IsAiTransformMode ? "BrandBrush" : "RecordingBrush",
         VacanamState.Transcribing or VacanamState.Processing => "BrandBrush",
         VacanamState.Completed => "SuccessBrush",
         VacanamState.Error => "ErrorBrush",

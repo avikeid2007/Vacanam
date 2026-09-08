@@ -20,6 +20,15 @@ public interface ITextProcessor : IDisposable
         Models.ApplicationContext context,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Transforms the selected text or generates an AI response based on the user's voice instruction.
+    /// </summary>
+    Task<string> TransformAsync(
+        string voiceInstruction,
+        string? selectedText,
+        Models.ApplicationContext context,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Loads the LLM model. Idempotent if already loaded.</summary>
     Task LoadModelAsync(CancellationToken cancellationToken = default);
 
