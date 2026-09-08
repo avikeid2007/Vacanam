@@ -670,7 +670,14 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     private AppSettings BuildSettings() => new()
     {
-        General = new() { StartWithWindows = StartWithWindows, ShowTrayNotifications = ShowTrayNotifications, DefaultMode = DefaultMode },
+        General = new()
+        {
+            StartWithWindows = StartWithWindows,
+            ShowTrayNotifications = ShowTrayNotifications,
+            DefaultMode = DefaultMode,
+            HasCompletedOnboarding = _originalSettings?.General?.HasCompletedOnboarding ?? false,
+            ShowLaunchBannerOnStartup = _originalSettings?.General?.ShowLaunchBannerOnStartup ?? true
+        },
         Hotkeys = new()
         {
             PushToTalk = PushToTalk,

@@ -103,8 +103,16 @@ public sealed partial class MainViewModel : ObservableObject
         }
     }
 
+    [RelayCommand]
+    private void OpenQuickStart()
+    {
+        _logger.LogDebug("OpenQuickStart command invoked.");
+        QuickStartRequested?.Invoke(this, EventArgs.Empty);
+    }
+
     // ── Events (for ApplicationLifetimeService) ───────────────────────────────
 
+    public event EventHandler? QuickStartRequested;
     public event EventHandler? SettingsRequested;
     public event EventHandler? ExitRequested;
     public event EventHandler? StartRecordingRequested;

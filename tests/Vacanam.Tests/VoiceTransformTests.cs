@@ -89,6 +89,15 @@ public class VoiceTransformTests
     }
 
     [Fact]
+    public void GeneralSettings_Defaults_IncludeOnboardingFlags()
+    {
+        var general = new GeneralSettings();
+
+        Assert.False(general.HasCompletedOnboarding);
+        Assert.True(general.ShowLaunchBannerOnStartup);
+    }
+
+    [Fact]
     public void IGlobalHotkeyService_ContractIncludesSuppressHoldDetection()
     {
         var testService = new TestHotkeyService();

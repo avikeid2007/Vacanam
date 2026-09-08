@@ -103,9 +103,18 @@ public sealed class ApplicationLifetimeService(
     {
         try
         {
-            var banner = new LaunchBannerWindow(settings.Value, modelManager, settingsManager);
+            var currentSettings = settings.Value;
+            bool shouldShow = !currentSettings.General.HasCompletedOnboarding || currentSettings.General.ShowLaunchBannerOnStartup;
+            if (!shouldShow)
+            {
+                logger.LogInformation("Launch onboarding banner skipped (onboarding already completed).");
+                return;
+            }
+
+            var banner = new LaunchBannerWindow(currentSettings, modelManager, settingsManager);
+            banner.SettingsRequested += OnSettingsRequested;
             banner.Show();
-            logger.LogInformation("Launch banner displayed.");
+            logger.LogInformation("Launch onboarding banner displayed.");
         }
         catch (Exception ex)
         {
@@ -146,6 +155,7 @@ public sealed class ApplicationLifetimeService(
 
     private void WireViewModelEvents()
     {
+        mainViewModel.QuickStartRequested += OnQuickStartRequested;
         mainViewModel.SettingsRequested += OnSettingsRequested;
         mainViewModel.ExitRequested += OnExitRequested;
         mainViewModel.StartRecordingRequested += OnHotkeyPressed;
@@ -562,6 +572,23 @@ public sealed class ApplicationLifetimeService(
                 await textInjector.InjectAsync(transcript, _currentSessionContext);
                 audioFeedbackService.Play(AudioCue.Success);
 
+                if (_isAiTransformMode)
+                {
+                    // In Ask AI / Voice Transform mode, always preserve the AI response on the Windows clipboard.
+                    // If the user selected text from a read-only source (e.g. Outlook reading pane, PDF, webpage),
+                    // the Ctrl+V attempt above cannot modify the read-only view. Leaving the response on the clipboard
+                    // allows the user to simply click "Reply" (or open any editor) and press Ctrl+V to paste.
+                    try
+                    {
+                        await clipboardService.SetTextAsync(transcript);
+                        overlayViewModel.StatusLabel = "📋 Copied to Clipboard (Ctrl+V to paste)";
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "Failed to copy transformed text to clipboard.");
+                    }
+                }
+
                 if (settings.Value.Privacy.SaveHistory)
                 {
                     try
@@ -585,7 +612,7 @@ public sealed class ApplicationLifetimeService(
 
                 TransitionTo(VacanamState.Completed);
                 overlayViewModel.State = VacanamState.Completed;
-                await Task.Delay(300);
+                await Task.Delay(_isAiTransformMode ? 1000 : 300);
             }
 
             TransitionTo(VacanamState.Idle);
@@ -630,6 +657,17 @@ public sealed class ApplicationLifetimeService(
     private void ShowOverlay() => _overlay?.Show();
     private void HideOverlay() => _overlay?.Hide();
 
+    private void OnQuickStartRequested(object? sender, EventArgs e)
+    {
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            var banner = new LaunchBannerWindow(settings.Value, modelManager, settingsManager);
+            banner.SettingsRequested += OnSettingsRequested;
+            banner.Show();
+            banner.Activate();
+        });
+    }
+
     private void OnSettingsRequested(object? sender, EventArgs e)
     {
         Application.Current.Dispatcher.Invoke(() =>
@@ -657,6 +695,9 @@ public sealed class ApplicationLifetimeService(
     {
         _audioMeterTimer?.Stop();
         _audioMeterTimer = null;
+
+        mainViewModel.QuickStartRequested -= OnQuickStartRequested;
+        mainViewModel.SettingsRequested -= OnSettingsRequested;
 
         hotkeyService.HotkeyPressed  -= OnHotkeyPressed;
         hotkeyService.HotkeyReleased -= OnHotkeyReleased;

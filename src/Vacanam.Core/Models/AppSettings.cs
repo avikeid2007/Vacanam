@@ -20,6 +20,8 @@ public sealed class GeneralSettings
     public bool StartWithWindows { get; set; } = false;
     public bool ShowTrayNotifications { get; set; } = true;
     public ProcessingMode DefaultMode { get; set; } = ProcessingMode.Fast;
+    public bool HasCompletedOnboarding { get; set; } = false;
+    public bool ShowLaunchBannerOnStartup { get; set; } = true;
 }
 
 public sealed class HotkeySettings
