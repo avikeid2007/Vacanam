@@ -42,7 +42,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     public string TrayTooltip => CurrentState switch
     {
-        VacanamState.Idle => "Vacanam — Ready (Ctrl+Space to record)",
+        VacanamState.Idle => "Vacanam — Ready (Ctrl+Space: Dictate | Shift+Space: Ask AI)",
         VacanamState.Recording => "Vacanam — Recording…",
         VacanamState.Transcribing => "Vacanam — Transcribing…",
         VacanamState.Processing => "Vacanam — AI processing…",

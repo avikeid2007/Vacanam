@@ -30,6 +30,7 @@ public sealed class ApplicationLifetimeService(
     ISpeechRecognizer speechRecognizer,
     ITextProcessor textProcessor,
     ITextInjector textInjector,
+    IClipboardService clipboardService,
     ITranscriptHistoryRepository historyRepository,
     IVoiceCommandProcessor voiceCommandProcessor,
     Vacanam.Speech.Punctuation.SmartPunctuationProcessor smartPunctuationProcessor,
@@ -40,6 +41,7 @@ public sealed class ApplicationLifetimeService(
     MainViewModel mainViewModel,
     SettingsViewModel settingsViewModel,
     RecordingOverlayViewModel overlayViewModel,
+    IAudioFeedbackService audioFeedbackService,
     ILogger<ApplicationLifetimeService> logger) : IHostedService, IDisposable
 {
     private TaskbarIcon? _trayIcon;
@@ -49,6 +51,8 @@ public sealed class ApplicationLifetimeService(
     private ApplicationContext _currentSessionContext = ApplicationContext.Unknown;
     private readonly SemaphoreSlim _pipelineLock = new(1, 1);
     private bool _stopRequestedDuringStart;
+    private bool _isAiTransformMode;
+    private string? _capturedSelectedText;
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -152,21 +156,23 @@ public sealed class ApplicationLifetimeService(
     {
         hotkeyService.HotkeyPressed  += OnHotkeyPressed;
         hotkeyService.HotkeyReleased += OnHotkeyReleased;
+        hotkeyService.AiTransformHotkeyPressed  += OnAiTransformHotkeyPressed;
+        hotkeyService.AiTransformHotkeyReleased += OnAiTransformHotkeyReleased;
 
         bool registered = hotkeyService.Register(0);
         mainViewModel.IsHotkeyRegistered = registered;
 
         if (registered)
         {
-            logger.LogInformation("Global hotkey registered successfully (Ctrl+Space).");
+            logger.LogInformation("Global hotkeys registered successfully (Ctrl+Space dictation, Shift+Space Ask AI).");
         }
         else
         {
-            logger.LogWarning("Global hotkey registration failed — Ctrl+Space is in use by another app.");
+            logger.LogWarning("Global hotkey registration failed — shortcut is in use by another app.");
             // Notify user via balloon tip — they can still use tray ▶ Start Dictation
             _trayIcon?.ShowBalloonTip(
                 "Hotkey Conflict",
-                "Ctrl+Space is already used by another app. Use tray ▶ Start Dictation instead, or change the hotkey in Settings.",
+                "A hotkey is already used by another app. You can change the hotkeys in Settings.",
                 Hardcodet.Wpf.TaskbarNotification.BalloonIcon.Warning);
         }
     }
@@ -184,7 +190,27 @@ public sealed class ApplicationLifetimeService(
 
     // ── Hotkey Handlers ───────────────────────────────────────────────────────
 
-    private async void OnHotkeyPressed(object? sender, EventArgs e)
+    private void OnHotkeyPressed(object? sender, EventArgs e)
+    {
+        StartRecordingSession(isAiTransform: false);
+    }
+
+    private void OnAiTransformHotkeyPressed(object? sender, EventArgs e)
+    {
+        StartRecordingSession(isAiTransform: true);
+    }
+
+    private void OnHotkeyReleased(object? sender, EventArgs e)
+    {
+        StopRecordingSession();
+    }
+
+    private void OnAiTransformHotkeyReleased(object? sender, EventArgs e)
+    {
+        StopRecordingSession();
+    }
+
+    private async void StartRecordingSession(bool isAiTransform)
     {
         await Application.Current.Dispatcher.InvokeAsync(async () =>
         {
@@ -194,14 +220,26 @@ public sealed class ApplicationLifetimeService(
                 return;
             }
 
+            _isAiTransformMode = isAiTransform;
+            _capturedSelectedText = null;
             _stopRequestedDuringStart = false;
             TransitionTo(VacanamState.StartingRecording);
             overlayViewModel.State = VacanamState.StartingRecording;
+            overlayViewModel.IsAiTransformMode = isAiTransform;
 
             _currentSessionContext = foregroundWindowService.GetCurrentContext();
             logger.LogInformation(
-                "Recording started. Target app: {Process} — Title: '{Title}' (HWND={Hwnd:X})",
+                "Recording started ({Mode}). Target app: {Process} — Title: '{Title}' (HWND={Hwnd:X})",
+                isAiTransform ? "Ask AI / Voice Transform" : "Dictation",
                 _currentSessionContext.ProcessName, _currentSessionContext.WindowTitle, _currentSessionContext.WindowHandle);
+
+            if (isAiTransform)
+            {
+                _capturedSelectedText = await CaptureSelectedTextAsync(_currentSessionContext.WindowHandle);
+                overlayViewModel.StatusLabel = !string.IsNullOrWhiteSpace(_capturedSelectedText)
+                    ? "🪄 Transform Selection…"
+                    : "🪄 Ask AI…";
+            }
 
             try
             {
@@ -219,6 +257,8 @@ public sealed class ApplicationLifetimeService(
                     return;
                 }
 
+                audioFeedbackService.Play(AudioCue.Start);
+
                 TransitionTo(VacanamState.Recording);
                 overlayViewModel.State = VacanamState.Recording;
                 ShowOverlay();
@@ -227,6 +267,7 @@ public sealed class ApplicationLifetimeService(
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to start audio recording session.");
+                audioFeedbackService.Play(AudioCue.Error);
                 TransitionTo(VacanamState.Error);
                 await Task.Delay(1000);
                 TransitionTo(VacanamState.Idle);
@@ -234,7 +275,7 @@ public sealed class ApplicationLifetimeService(
         }).Task.Unwrap();
     }
 
-    private async void OnHotkeyReleased(object? sender, EventArgs e)
+    private async void StopRecordingSession()
     {
         await Application.Current.Dispatcher.InvokeAsync(async () =>
         {
@@ -255,9 +296,96 @@ public sealed class ApplicationLifetimeService(
         }).Task.Unwrap();
     }
 
+    private async Task<string?> CaptureSelectedTextAsync(nint targetHwnd)
+    {
+        try
+        {
+            // Suppress hold poller during simulation to prevent false key-up triggers when releasing Shift
+            hotkeyService.SuppressHoldDetection(true);
+
+            object? backup = null;
+            try
+            {
+                backup = await clipboardService.BackupAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to backup clipboard prior to text selection probe.");
+            }
+
+            string sentinel = $"__VACANAM_SENTINEL_{Guid.NewGuid():N}__";
+            await clipboardService.SetTextAsync(sentinel);
+
+            // Send Ctrl+C with modifier release to reliably capture selection in VS Code, Outlook, etc.
+            bool isPushToTalk = settings.Value.Hotkeys.PushToTalk;
+            await Vacanam.Windows.Interop.KeySimulator.CopySelectionAsync(
+                targetHwnd,
+                isPushToTalk: isPushToTalk);
+
+            // Poll clipboard for up to 200ms (8 * 25ms) waiting for target app to process copy
+            string? capturedText = null;
+            for (int i = 0; i < 8; i++)
+            {
+                await Task.Delay(25);
+                string? clipboardText = await clipboardService.GetTextAsync();
+                if (!string.IsNullOrEmpty(clipboardText) && !string.Equals(clipboardText, sentinel, StringComparison.Ordinal))
+                {
+                    capturedText = clipboardText;
+                    break;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(capturedText))
+            {
+                logger.LogInformation("Captured {Length} chars of selected text from HWND={Hwnd:X}", capturedText.Length, targetHwnd);
+            }
+            else
+            {
+                logger.LogInformation("No text selected in target window. Entering Direct Ask AI mode.");
+            }
+
+            // Restore user clipboard immediately
+            if (backup is not null)
+            {
+                try
+                {
+                    await clipboardService.RestoreAsync(backup);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to restore clipboard after selection probe.");
+                }
+            }
+            else
+            {
+                // Clear sentinel so it does not linger on user's clipboard
+                try
+                {
+                    await clipboardService.SetTextAsync(string.Empty);
+                }
+                catch
+                {
+                    // Best effort
+                }
+            }
+
+            return capturedText;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to probe selected text from target window.");
+            return null;
+        }
+        finally
+        {
+            hotkeyService.SuppressHoldDetection(false);
+        }
+    }
+
     private async Task StopRecordingAndProcessAsync()
     {
         logger.LogInformation("Hotkey released. Stopping audio capture.");
+        audioFeedbackService.Play(AudioCue.Stop);
         _audioMeterTimer?.Stop();
 
         try
@@ -276,6 +404,7 @@ public sealed class ApplicationLifetimeService(
             if (totalBytes < 1600) // Less than ~50ms of audio
             {
                 logger.LogInformation("Audio clip too short. Skipping transcription.");
+                audioFeedbackService.Play(AudioCue.Error);
                 TransitionTo(VacanamState.Idle);
                 overlayViewModel.State = VacanamState.Idle;
                 HideOverlay();
@@ -296,6 +425,7 @@ public sealed class ApplicationLifetimeService(
 
             if (string.IsNullOrWhiteSpace(transcript))
             {
+                audioFeedbackService.Play(AudioCue.Error);
                 if (audioRecorder.IsMuted)
                 {
                     overlayViewModel.StatusLabel = "Mic is Muted 🔇";
@@ -318,69 +448,107 @@ public sealed class ApplicationLifetimeService(
                 bool isAiEnabled = settings.Value.Ai.Enabled;
                 bool wasSnippetExpanded = false;
 
-                // 1. Voice Command & Snippet Detection
-                if (settings.Value.VoiceCommands.Enabled)
+                if (_isAiTransformMode)
                 {
-                    var cmdResult = await voiceCommandProcessor.ProcessAsync(transcript, _currentSessionContext);
-                    if (cmdResult.WasCommand)
+                    bool hasSelection = !string.IsNullOrWhiteSpace(_capturedSelectedText);
+                    logger.LogInformation(
+                        "Voice Transform mode active. Instruction: '{Transcript}', hasSelection: {HasSelection}",
+                        transcript, hasSelection);
+
+                    TransitionTo(VacanamState.Processing);
+                    overlayViewModel.State = VacanamState.Processing;
+                    overlayViewModel.StatusLabel = hasSelection ? "🪄 Transforming…" : "🪄 Thinking…";
+
+                    try
                     {
-                        if (string.IsNullOrEmpty(cmdResult.ProcessedText))
+                        string transformed = await textProcessor.TransformAsync(
+                            transcript,
+                            _capturedSelectedText,
+                            _currentSessionContext);
+
+                        if (!string.IsNullOrWhiteSpace(transformed))
                         {
-                            // Standalone Action Command executed (Select All, Copy, Undo, etc.)
-                            logger.LogInformation("Voice Action Command executed: {Command}", cmdResult.CommandName);
-                            overlayViewModel.StatusLabel = $"⚡ {cmdResult.CommandName}";
-                            TransitionTo(VacanamState.Completed);
-                            overlayViewModel.State = VacanamState.Completed;
-                            await Task.Delay(400);
-                            TransitionTo(VacanamState.Idle);
-                            overlayViewModel.State = VacanamState.Idle;
-                            HideOverlay();
-                            return;
-                        }
-                        else
-                        {
-                            // Custom Snippet Macro expanded
-                            logger.LogInformation("Voice Snippet expanded: {Command}", cmdResult.CommandName);
-                            transcript = cmdResult.ProcessedText;
-                            wasSnippetExpanded = true;
+                            logger.LogInformation(">>> TRANSFORMED OUTPUT: '{Output}' <<<", transformed);
+                            transcript = transformed;
+                            wasActuallyEnhanced = true;
                         }
                     }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Voice Transform failed. Using raw transcript.");
+                    }
+
+                    rawTranscript = hasSelection
+                        ? $"[Transform: {rawTranscript}] {_capturedSelectedText}"
+                        : $"[Ask AI] {rawTranscript}";
                 }
-
-                // Only apply smart punctuation & AI rewrite if it wasn't a custom snippet expansion
-                if (!wasSnippetExpanded)
+                else
                 {
-                    // 2. Smart Verbal Punctuation Formatting
-                    if (settings.Value.VoiceCommands.EnableSmartPunctuation)
+                    // 1. Voice Command & Snippet Detection
+                    if (settings.Value.VoiceCommands.Enabled)
                     {
-                        string formatted = smartPunctuationProcessor.Format(transcript);
-                        if (!string.IsNullOrWhiteSpace(formatted))
+                        var cmdResult = await voiceCommandProcessor.ProcessAsync(transcript, _currentSessionContext);
+                        if (cmdResult.WasCommand)
                         {
-                            transcript = formatted;
-                        }
-                    }
-
-                    // 3. AI Text Enhancement
-                    if (isAiEnabled)
-                    {
-                        try
-                        {
-                            logger.LogInformation("AI text enhancement enabled. Processing transcript with LLM model '{Model}'...", settings.Value.Ai.ModelFile);
-                            TransitionTo(VacanamState.Processing);
-                            overlayViewModel.State = VacanamState.Processing;
-                            overlayViewModel.StatusLabel = "AI mode…";
-
-                            string refined = await textProcessor.ProcessAsync(transcript, _currentSessionContext);
-                            if (!string.IsNullOrWhiteSpace(refined))
+                            if (string.IsNullOrEmpty(cmdResult.ProcessedText))
                             {
-                                logger.LogInformation(">>> REFINED TRANSCRIPT: '{Refined}' <<<", refined);
-                                transcript = refined;
-                                wasActuallyEnhanced = true;
+                                // Standalone Action Command executed (Select All, Copy, Undo, etc.)
+                                logger.LogInformation("Voice Action Command executed: {Command}", cmdResult.CommandName);
+                                audioFeedbackService.Play(AudioCue.Success);
+                                overlayViewModel.StatusLabel = $"⚡ {cmdResult.CommandName}";
+                                TransitionTo(VacanamState.Completed);
+                                overlayViewModel.State = VacanamState.Completed;
+                                await Task.Delay(400);
+                                TransitionTo(VacanamState.Idle);
+                                overlayViewModel.State = VacanamState.Idle;
+                                HideOverlay();
+                                return;
+                            }
+                            else
+                            {
+                                // Custom Snippet Macro expanded
+                                logger.LogInformation("Voice Snippet expanded: {Command}", cmdResult.CommandName);
+                                transcript = cmdResult.ProcessedText;
+                                wasSnippetExpanded = true;
                             }
                         }
-                        catch (Exception ex)
+                    }
+
+                    // Only apply smart punctuation & AI rewrite if it wasn't a custom snippet expansion
+                    if (!wasSnippetExpanded)
+                    {
+                        // 2. Smart Verbal Punctuation Formatting
+                        if (settings.Value.VoiceCommands.EnableSmartPunctuation)
                         {
-                            logger.LogWarning(ex, "AI text enhancement failed. Falling back to raw transcript.");
+                            string formatted = smartPunctuationProcessor.Format(transcript);
+                            if (!string.IsNullOrWhiteSpace(formatted))
+                            {
+                                transcript = formatted;
+                            }
+                        }
+
+                        // 3. AI Text Enhancement
+                        if (isAiEnabled)
+                        {
+                            try
+                            {
+                                logger.LogInformation("AI text enhancement enabled. Processing transcript with LLM model '{Model}'...", settings.Value.Ai.ModelFile);
+                                TransitionTo(VacanamState.Processing);
+                                overlayViewModel.State = VacanamState.Processing;
+                                overlayViewModel.StatusLabel = "AI mode…";
+
+                                string refined = await textProcessor.ProcessAsync(transcript, _currentSessionContext);
+                                if (!string.IsNullOrWhiteSpace(refined))
+                                {
+                                    logger.LogInformation(">>> REFINED TRANSCRIPT: '{Refined}' <<<", refined);
+                                    transcript = refined;
+                                    wasActuallyEnhanced = true;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.LogWarning(ex, "AI text enhancement failed. Falling back to raw transcript.");
+                            }
                         }
                     }
                 }
@@ -392,6 +560,7 @@ public sealed class ApplicationLifetimeService(
                 overlayViewModel.State = VacanamState.Inserting;
 
                 await textInjector.InjectAsync(transcript, _currentSessionContext);
+                audioFeedbackService.Play(AudioCue.Success);
 
                 if (settings.Value.Privacy.SaveHistory)
                 {
@@ -426,6 +595,7 @@ public sealed class ApplicationLifetimeService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error during transcription & injection pipeline: {Message}", ex.Message);
+            audioFeedbackService.Play(AudioCue.Error);
             overlayViewModel.StatusLabel = $"Error: {ex.Message}";
             TransitionTo(VacanamState.Error);
             await Task.Delay(2500);
@@ -435,6 +605,8 @@ public sealed class ApplicationLifetimeService(
         }
         finally
         {
+            _isAiTransformMode = false;
+            _capturedSelectedText = null;
             _recordingBuffer?.Dispose();
             _recordingBuffer = null;
         }
@@ -488,6 +660,8 @@ public sealed class ApplicationLifetimeService(
 
         hotkeyService.HotkeyPressed  -= OnHotkeyPressed;
         hotkeyService.HotkeyReleased -= OnHotkeyReleased;
+        hotkeyService.AiTransformHotkeyPressed  -= OnAiTransformHotkeyPressed;
+        hotkeyService.AiTransformHotkeyReleased -= OnAiTransformHotkeyReleased;
         hotkeyService.Unregister();
 
         _recordingBuffer?.Dispose();

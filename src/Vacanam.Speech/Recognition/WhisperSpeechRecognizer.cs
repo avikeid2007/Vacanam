@@ -116,6 +116,7 @@ public sealed class WhisperSpeechRecognizer : ISpeechRecognizer
             var builder = _factory!.CreateBuilder()
                 .WithLanguage(language)
                 .WithThreads(threads)
+                .WithPrompt("Reply, rewrite, summarize, translate, email, message, code, dictation.")
                 .WithSingleSegment(); // Optimize for short voice typing clips
 
             using var processor = builder.Build();

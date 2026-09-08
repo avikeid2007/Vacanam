@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Vacanam.Audio.Capture;
 using Vacanam.Audio.Vad;
 using Vacanam.Core.Interfaces;
@@ -27,6 +27,9 @@ public static class AudioServiceCollectionExtensions
 
         // Recording buffer — transient: one per session, injected into ApplicationLifetimeService
         services.AddTransient<RecordingBuffer>();
+
+        // Audio feedback / earcons service
+        services.AddSingleton<IAudioFeedbackService, Feedback.AudioFeedbackService>();
 
         return services;
     }
